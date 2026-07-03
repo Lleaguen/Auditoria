@@ -8,6 +8,7 @@ interface StatCardProps {
   sub?: string;
   colorClass?: string;
   icon?: React.ReactNode;
+  trend?: 'up' | 'down' | 'neutral';
 }
 
 export default function StatCard({
@@ -18,13 +19,25 @@ export default function StatCard({
   icon,
 }: StatCardProps) {
   return (
-    <div className="bg-white rounded-xl border border-zinc-200 p-4 flex flex-col gap-1 shadow-sm">
-      <div className="flex items-center gap-2 text-zinc-500 text-xs font-medium uppercase tracking-wide">
-        {icon && <span className="text-zinc-400">{icon}</span>}
-        {label}
+    <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">
+          {label}
+        </span>
+        {icon && (
+          <span className="bg-zinc-100 text-zinc-400 p-1.5 rounded-lg">
+            {icon}
+          </span>
+        )}
       </div>
-      <div className={`text-2xl font-bold ${colorClass}`}>{value}</div>
-      {sub && <div className="text-xs text-zinc-400">{sub}</div>}
+      <div>
+        <div className={`text-3xl font-bold tracking-tight ${colorClass}`}>
+          {value}
+        </div>
+        {sub && (
+          <div className="text-xs text-zinc-400 mt-1 font-medium">{sub}</div>
+        )}
+      </div>
     </div>
   );
 }

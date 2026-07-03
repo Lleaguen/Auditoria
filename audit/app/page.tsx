@@ -1,39 +1,44 @@
 import CsvUploader from "@/components/csv/CsvUploader";
-import { Upload } from "lucide-react";
+import { Upload, ArrowRight, ScanLine, BarChart3, Save } from "lucide-react";
 
 export default function HomePage() {
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl space-y-8">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-zinc-800 flex items-center gap-2">
-          <Upload size={22} className="text-blue-500" />
+        <div className="flex items-center gap-2 text-indigo-500 text-sm font-semibold mb-2">
+          <Upload size={14} />
+          Paso 1 de 3
+        </div>
+        <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">
           Cargar dataset CSV
         </h1>
-        <p className="text-zinc-500 text-sm mt-1">
-          Cargá el archivo exportado del sistema. El dataset quedará disponible
-          para auditar cualquier HU mientras la sesión esté activa.
+        <p className="text-zinc-500 mt-2 text-sm leading-relaxed">
+          Cargá el archivo exportado del sistema. El dataset queda disponible en memoria
+          para auditar cualquier HU durante la sesión.
         </p>
       </div>
 
       <CsvUploader />
 
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700 space-y-1">
-        <p className="font-semibold">¿Cómo funciona?</p>
-        <ol className="list-decimal list-inside space-y-1 text-blue-600">
-          <li>Cargá el CSV exportado del sistema (delimitado por comas).</li>
-          <li>
-            Ir a <strong>Auditoría HU</strong> → ingresá el número de HU
-            (Outbound ID).
-          </li>
-          <li>Escaneá los shipments físicos con el scanner.</li>
-          <li>
-            Hacé clic en <strong>Comparar con sistema</strong> para ver
-            faltantes, sobrantes y cruzados.
-          </li>
-          <li>
-            Guardá la auditoría para que aparezca en el{" "}
-            <strong>Dashboard</strong>.
-          </li>
+      {/* How it works */}
+      <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-sm">
+        <p className="text-sm font-semibold text-zinc-700 mb-4">¿Cómo funciona?</p>
+        <ol className="space-y-3">
+          {[
+            { icon: Upload,         text: 'Cargá el CSV exportado del sistema (delimitado por comas).' },
+            { icon: ScanLine,       text: 'Ir a Auditoría HU → ingresá el Outbound ID y escaneá los shipments físicos.' },
+            { icon: ArrowRight,     text: 'Hacé clic en Comparar para ver faltantes, sobrantes y cruzados.' },
+            { icon: Save,           text: 'Guardá la auditoría en la base de datos local.' },
+            { icon: BarChart3,      text: 'Revisá métricas consolidadas en el Dashboard.' },
+          ].map(({ icon: Icon, text }, i) => (
+            <li key={i} className="flex items-start gap-3">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-50 text-indigo-500 shrink-0 text-xs font-bold mt-0.5">
+                {i + 1}
+              </span>
+              <span className="text-sm text-zinc-600 leading-relaxed">{text}</span>
+            </li>
+          ))}
         </ol>
       </div>
     </div>

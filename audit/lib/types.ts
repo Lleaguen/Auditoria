@@ -82,6 +82,7 @@ export interface ScannedShipment {
 }
 
 export interface AuditResult {
+  id?: number;          // id asignado por la DB (presente cuando viene del backend)
   huId: string;
   date: string;
   shift: string;
@@ -136,4 +137,4 @@ export interface UserStats {
 }
 
 // ── Turno ────────────────────────────────────────────────────────────────────
-export type Shift = 'TT' | 'TN' | 'AM' | '';
+export type Shift = 'TT' | 'TN' | 'TM' | '';

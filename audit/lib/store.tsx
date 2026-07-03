@@ -6,51 +6,54 @@ import React, {
   useReducer,
   useEffect,
   useCallback,
+  useState,
 } from 'react';
 import type { ShipmentRow, AuditResult } from './types';
+import { fetchAudits, saveAudit, deleteAuditById, checkBackendHealth } from './api';
 
 // ── Estado global ────────────────────────────────────────────────────────────
 
 interface AppState {
-  csvData: ShipmentRow[];        // Dataset cargado
+  csvData: ShipmentRow[];
   csvFileName: string;
-  audits: AuditResult[];         // Historial de auditorías guardadas
+  audits: AuditResult[];
+  backendOnline: boolean;
+  loadingAudits: boolean;
 }
 
 type Action =
   | { type: 'SET_CSV'; payload: { data: ShipmentRow[]; fileName: string } }
+  | { type: 'CLEAR_CSV' }
+  | { type: 'SET_AUDITS'; payload: AuditResult[] }
   | { type: 'ADD_AUDIT'; payload: AuditResult }
-  | { type: 'DELETE_AUDIT'; payload: string }   // huId
-  | { type: 'LOAD_AUDITS'; payload: AuditResult[] }
-  | { type: 'CLEAR_CSV' };
-
-const STORAGE_KEY = 'hu_audit_history';
+  | { type: 'REMOVE_AUDIT'; payload: number }          // id de DB
+  | { type: 'SET_BACKEND_ONLINE'; payload: boolean }
+  | { type: 'SET_LOADING_AUDITS'; payload: boolean };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'SET_CSV':
-      return {
-        ...state,
-        csvData: action.payload.data,
-        csvFileName: action.payload.fileName,
-      };
+      return { ...state, csvData: action.payload.data, csvFileName: action.payload.fileName };
     case 'CLEAR_CSV':
       return { ...state, csvData: [], csvFileName: '' };
+    case 'SET_AUDITS':
+      return { ...state, audits: action.payload };
     case 'ADD_AUDIT': {
       // Reemplaza si ya existe la misma auditoría (mismo HU + fecha)
       const filtered = state.audits.filter(
-        (a) =>
-          !(a.huId === action.payload.huId && a.date === action.payload.date)
+        (a) => !(a.huId === action.payload.huId && a.date === action.payload.date)
       );
       return { ...state, audits: [action.payload, ...filtered] };
     }
-    case 'DELETE_AUDIT':
+    case 'REMOVE_AUDIT':
       return {
         ...state,
-        audits: state.audits.filter((a) => a.huId !== action.payload),
+        audits: state.audits.filter((a) => (a as AuditResult & { id?: number }).id !== action.payload),
       };
-    case 'LOAD_AUDITS':
-      return { ...state, audits: action.payload };
+    case 'SET_BACKEND_ONLINE':
+      return { ...state, backendOnline: action.payload };
+    case 'SET_LOADING_AUDITS':
+      return { ...state, loadingAudits: action.payload };
     default:
       return state;
   }
@@ -62,8 +65,9 @@ interface AppContextValue {
   state: AppState;
   setCsv: (data: ShipmentRow[], fileName: string) => void;
   clearCsv: () => void;
-  addAudit: (audit: AuditResult) => void;
-  deleteAudit: (huId: string) => void;
+  addAudit: (audit: AuditResult) => Promise<void>;
+  deleteAudit: (id: number) => Promise<void>;
+  reloadAudits: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -73,29 +77,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     csvData: [],
     csvFileName: '',
     audits: [],
+    backendOnline: false,
+    loadingAudits: true,
   });
 
-  // Cargar historial de localStorage al iniciar
-  useEffect(() => {
+  // ── Verificar backend y cargar auditorías al iniciar ─────────────────────
+  const reloadAudits = useCallback(async () => {
+    dispatch({ type: 'SET_LOADING_AUDITS', payload: true });
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as AuditResult[];
-        dispatch({ type: 'LOAD_AUDITS', payload: parsed });
+      const online = await checkBackendHealth();
+      dispatch({ type: 'SET_BACKEND_ONLINE', payload: online });
+
+      if (online) {
+        const audits = await fetchAudits();
+        dispatch({ type: 'SET_AUDITS', payload: audits });
       }
-    } catch {
-      // ignora errores de parseo
+    } catch (err) {
+      console.error('[Store] Error al cargar auditorías:', err);
+      dispatch({ type: 'SET_BACKEND_ONLINE', payload: false });
+    } finally {
+      dispatch({ type: 'SET_LOADING_AUDITS', payload: false });
     }
   }, []);
 
-  // Persiste auditorías en localStorage cuando cambian
   useEffect(() => {
+    reloadAudits();
+  }, [reloadAudits]);
+
+  // ── Guardar auditoría en backend ─────────────────────────────────────────
+  const addAudit = useCallback(async (audit: AuditResult) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.audits));
-    } catch {
-      // cuota excedida u otro error
+      const saved = await saveAudit(audit);
+      dispatch({ type: 'ADD_AUDIT', payload: saved });
+    } catch (err) {
+      console.error('[Store] Error al guardar auditoría:', err);
+      throw err;
     }
-  }, [state.audits]);
+  }, []);
+
+  // ── Eliminar auditoría por id de DB ──────────────────────────────────────
+  const deleteAudit = useCallback(async (id: number) => {
+    try {
+      await deleteAuditById(id);
+      dispatch({ type: 'REMOVE_AUDIT', payload: id });
+    } catch (err) {
+      console.error('[Store] Error al eliminar auditoría:', err);
+      throw err;
+    }
+  }, []);
 
   const setCsv = useCallback((data: ShipmentRow[], fileName: string) => {
     dispatch({ type: 'SET_CSV', payload: { data, fileName } });
@@ -105,16 +134,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'CLEAR_CSV' });
   }, []);
 
-  const addAudit = useCallback((audit: AuditResult) => {
-    dispatch({ type: 'ADD_AUDIT', payload: audit });
-  }, []);
-
-  const deleteAudit = useCallback((huId: string) => {
-    dispatch({ type: 'DELETE_AUDIT', payload: huId });
-  }, []);
-
   return (
-    <AppContext.Provider value={{ state, setCsv, clearCsv, addAudit, deleteAudit }}>
+    <AppContext.Provider value={{ state, setCsv, clearCsv, addAudit, deleteAudit, reloadAudits }}>
       {children}
     </AppContext.Provider>
   );

@@ -3,13 +3,16 @@ import { ClipboardCheck } from "lucide-react";
 
 export default function AuditoriaPage() {
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-800 flex items-center gap-2">
-          <ClipboardCheck size={22} className="text-blue-500" />
-          Auditoría de HU
+        <div className="flex items-center gap-2 text-indigo-500 text-sm font-semibold mb-2">
+          <ClipboardCheck size={14} />
+          Auditoría HU
+        </div>
+        <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">
+          Auditar pallet
         </h1>
-        <p className="text-zinc-500 text-sm mt-1">
+        <p className="text-zinc-500 mt-2 text-sm">
           Buscá el HU, escaneá los shipments y comparalos contra el sistema.
         </p>
       </div>
