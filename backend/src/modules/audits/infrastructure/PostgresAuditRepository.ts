@@ -10,12 +10,14 @@ interface AuditRow {
   date: string;
   shift: string;
   subca: string;
+  observations: string;
   total_system: number;
   total_scanned: number;
   total_ok: number;
   total_missing: number;
   total_surplus: number;
   total_crossed: number;
+  total_unmanifested: number;
   assembly_users: string[];
   crossed_hus: string[];
   system_shipments: string[];
@@ -46,18 +48,19 @@ export class PostgresAuditRepository implements AuditRepository {
 
   private rowToAudit(row: AuditRow, results: ScannedShipmentResult[]): Audit {
     return {
-      id:               row.id,
-      huId:             row.hu_id,
-      date:             row.date,
-      shift:            row.shift as Audit['shift'],
-      subca:            row.subca,
-      totalSystem:      Number(row.total_system),
-      totalScanned:     Number(row.total_scanned),
-      totalOk:          Number(row.total_ok),
-      totalMissing:     Number(row.total_missing),
-      totalSurplus:     Number(row.total_surplus),
-      totalCrossed:     Number(row.total_crossed),
-      // Postgres con JSONB devuelve arrays directamente (ya parseados)
+      id:                row.id,
+      huId:              row.hu_id,
+      date:              row.date,
+      shift:             row.shift as Audit['shift'],
+      subca:             row.subca,
+      observations:      row.observations ?? '',
+      totalSystem:       Number(row.total_system),
+      totalScanned:      Number(row.total_scanned),
+      totalOk:           Number(row.total_ok),
+      totalMissing:      Number(row.total_missing),
+      totalSurplus:      Number(row.total_surplus),
+      totalCrossed:      Number(row.total_crossed),
+      totalUnmanifested: Number(row.total_unmanifested ?? 0),
       assemblyUsers:    Array.isArray(row.assembly_users)    ? row.assembly_users    : [],
       crossedHus:       Array.isArray(row.crossed_hus)       ? row.crossed_hus       : [],
       systemShipments:  Array.isArray(row.system_shipments)  ? row.system_shipments  : [],
@@ -118,35 +121,39 @@ export class PostgresAuditRepository implements AuditRepository {
       // Upsert: si ya existe el mismo hu_id + date, actualiza todo
       const upsertResult = await client.query<{ id: number }>(
         `INSERT INTO audits (
-          hu_id, date, shift, subca,
-          total_system, total_scanned, total_ok, total_missing, total_surplus, total_crossed,
+          hu_id, date, shift, subca, observations,
+          total_system, total_scanned, total_ok, total_missing, total_surplus, total_crossed, total_unmanifested,
           assembly_users, crossed_hus, system_shipments, scanned_shipments
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
         ON CONFLICT (hu_id, date) DO UPDATE SET
-          shift             = EXCLUDED.shift,
-          subca             = EXCLUDED.subca,
-          total_system      = EXCLUDED.total_system,
-          total_scanned     = EXCLUDED.total_scanned,
-          total_ok          = EXCLUDED.total_ok,
-          total_missing     = EXCLUDED.total_missing,
-          total_surplus     = EXCLUDED.total_surplus,
-          total_crossed     = EXCLUDED.total_crossed,
-          assembly_users    = EXCLUDED.assembly_users,
-          crossed_hus       = EXCLUDED.crossed_hus,
-          system_shipments  = EXCLUDED.system_shipments,
-          scanned_shipments = EXCLUDED.scanned_shipments
+          shift              = EXCLUDED.shift,
+          subca              = EXCLUDED.subca,
+          observations       = EXCLUDED.observations,
+          total_system       = EXCLUDED.total_system,
+          total_scanned      = EXCLUDED.total_scanned,
+          total_ok           = EXCLUDED.total_ok,
+          total_missing      = EXCLUDED.total_missing,
+          total_surplus      = EXCLUDED.total_surplus,
+          total_crossed      = EXCLUDED.total_crossed,
+          total_unmanifested = EXCLUDED.total_unmanifested,
+          assembly_users     = EXCLUDED.assembly_users,
+          crossed_hus        = EXCLUDED.crossed_hus,
+          system_shipments   = EXCLUDED.system_shipments,
+          scanned_shipments  = EXCLUDED.scanned_shipments
         RETURNING id`,
         [
           audit.huId,
           audit.date,
           audit.shift,
           audit.subca,
+          audit.observations ?? '',
           audit.totalSystem,
           audit.totalScanned,
           audit.totalOk,
           audit.totalMissing,
-          audit.totalSurplus,
+          audit.totalSurplus ?? 0,
           audit.totalCrossed,
+          audit.totalUnmanifested ?? 0,
           JSON.stringify(audit.assemblyUsers),
           JSON.stringify(audit.crossedHus),
           JSON.stringify(audit.systemShipments),

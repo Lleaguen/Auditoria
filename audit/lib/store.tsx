@@ -35,11 +35,13 @@ type Action =
 function normalizeAudit(a: AuditResult): AuditResult {
   return {
     ...a,
-    totalSurplus:  a.totalSurplus  ?? 0,
-    totalCrossed:  a.totalCrossed  ?? 0,
-    crossedHus:    a.crossedHus    ?? [],
-    assemblyUsers: a.assemblyUsers ?? [],
-    results:       a.results       ?? [],
+    observations:      a.observations      ?? '',
+    totalSurplus:      a.totalSurplus      ?? 0,
+    totalCrossed:      a.totalCrossed      ?? 0,
+    totalUnmanifested: a.totalUnmanifested ?? 0,
+    crossedHus:        a.crossedHus        ?? [],
+    assemblyUsers:     a.assemblyUsers     ?? [],
+    results:           a.results           ?? [],
   };
 }
 

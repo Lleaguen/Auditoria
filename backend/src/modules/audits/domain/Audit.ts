@@ -1,7 +1,7 @@
 // ── Entidad de dominio ───────────────────────────────────────────────────────
 // Espeja AuditResult + ScannedShipment del frontend, sin dependencias externas
 
-export type ShipmentScanStatus = 'ok' | 'missing' | 'surplus' | 'crossed';
+export type ShipmentScanStatus = 'ok' | 'missing' | 'surplus' | 'crossed' | 'unmanifested';
 
 export type Shift = 'TT' | 'TN' | 'TM' | '';
 
@@ -18,11 +18,12 @@ export interface ScannedShipmentResult {
 }
 
 export interface Audit {
-  id?: number;           // asignado por la DB al persistir
+  id?: number;
   huId: string;
   date: string;
   shift: Shift;
   subca: string;
+  observations: string;
   systemShipments: string[];
   scannedShipments: string[];
   results: ScannedShipmentResult[];
@@ -32,6 +33,7 @@ export interface Audit {
   totalMissing: number;
   totalSurplus: number;
   totalCrossed: number;
+  totalUnmanifested: number;
   assemblyUsers: string[];
   crossedHus: string[];
   createdAt?: string;

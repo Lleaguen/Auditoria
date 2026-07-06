@@ -10,18 +10,19 @@ export async function runMigrations(): Promise<void> {
       date              TEXT    NOT NULL,
       shift             TEXT    NOT NULL DEFAULT '',
       subca             TEXT    NOT NULL DEFAULT '',
+      observations      TEXT    NOT NULL DEFAULT '',
       total_system      INTEGER NOT NULL DEFAULT 0,
       total_scanned     INTEGER NOT NULL DEFAULT 0,
       total_ok          INTEGER NOT NULL DEFAULT 0,
       total_missing     INTEGER NOT NULL DEFAULT 0,
       total_surplus     INTEGER NOT NULL DEFAULT 0,
       total_crossed     INTEGER NOT NULL DEFAULT 0,
+      total_unmanifested INTEGER NOT NULL DEFAULT 0,
       assembly_users    JSONB   NOT NULL DEFAULT '[]',
       crossed_hus       JSONB   NOT NULL DEFAULT '[]',
       system_shipments  JSONB   NOT NULL DEFAULT '[]',
       scanned_shipments JSONB   NOT NULL DEFAULT '[]',
       created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      -- Unicidad: mismo HU en la misma fecha no se duplica
       UNIQUE(hu_id, date)
     );
 
@@ -29,7 +30,7 @@ export async function runMigrations(): Promise<void> {
       id                          SERIAL PRIMARY KEY,
       audit_id                    INTEGER NOT NULL REFERENCES audits(id) ON DELETE CASCADE,
       shipment_id                 TEXT    NOT NULL,
-      status                      TEXT    NOT NULL CHECK(status IN ('ok','missing','surplus','crossed')),
+      status                      TEXT    NOT NULL CHECK(status IN ('ok','missing','surplus','crossed','unmanifested')),
       subca                       TEXT    NOT NULL DEFAULT '',
       status_description          TEXT    NOT NULL DEFAULT '',
       labeling_last_print_user    TEXT    NOT NULL DEFAULT '',
@@ -38,6 +39,11 @@ export async function runMigrations(): Promise<void> {
       dispatched                  BOOLEAN NOT NULL DEFAULT FALSE,
       crossed_from_hu             TEXT
     );
+
+    -- Columnas nuevas: agregar si no existen (migraciones no destructivas)
+    ALTER TABLE audits ADD COLUMN IF NOT EXISTS observations       TEXT    NOT NULL DEFAULT '';
+    ALTER TABLE audits ADD COLUMN IF NOT EXISTS total_surplus      INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE audits ADD COLUMN IF NOT EXISTS total_unmanifested INTEGER NOT NULL DEFAULT 0;
 
     CREATE INDEX IF NOT EXISTS idx_audits_date   ON audits(date);
     CREATE INDEX IF NOT EXISTS idx_audits_hu_id  ON audits(hu_id);
