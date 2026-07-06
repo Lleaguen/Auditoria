@@ -25,7 +25,8 @@ const STATUS_PRIORITY: Record<ShipmentScanStatus, number> = {
   missing:      0,
   crossed:      1,
   unmanifested: 2,
-  ok:           3,
+  surplus:      3,
+  ok:           4,
 };
 
 // ── Filtros rápidos ──────────────────────────────────────────────────────────
@@ -35,6 +36,7 @@ const FILTER_OPTIONS: { value: ShipmentScanStatus | 'all'; label: string; color:
   { value: 'missing',      label: 'Faltantes',       color: 'bg-red-50 text-red-700 border-red-200' },
   { value: 'crossed',      label: 'Cruzados',        color: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
   { value: 'unmanifested', label: 'Sin manifestar',  color: 'bg-orange-50 text-orange-700 border-orange-200' },
+  { value: 'surplus',      label: 'Sobrantes',       color: 'bg-purple-50 text-purple-700 border-purple-200' },
   { value: 'ok',           label: 'OK',              color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
 ];
 

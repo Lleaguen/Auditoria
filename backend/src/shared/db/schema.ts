@@ -45,6 +45,11 @@ export async function runMigrations(): Promise<void> {
     ALTER TABLE audits ADD COLUMN IF NOT EXISTS total_surplus      INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE audits ADD COLUMN IF NOT EXISTS total_unmanifested INTEGER NOT NULL DEFAULT 0;
 
+    -- Actualizar el CHECK constraint de status para incluir 'unmanifested'
+    ALTER TABLE audit_shipment_results DROP CONSTRAINT IF EXISTS audit_shipment_results_status_check;
+    ALTER TABLE audit_shipment_results ADD CONSTRAINT audit_shipment_results_status_check
+      CHECK(status IN ('ok','missing','surplus','crossed','unmanifested'));
+
     CREATE INDEX IF NOT EXISTS idx_audits_date   ON audits(date);
     CREATE INDEX IF NOT EXISTS idx_audits_hu_id  ON audits(hu_id);
     CREATE INDEX IF NOT EXISTS idx_audits_shift  ON audits(shift);
