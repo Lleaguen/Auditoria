@@ -27,7 +27,8 @@ export function runAudit(
   huId: string,
   scannedIds: string[],
   date: string,
-  shift: string
+  shift: string,
+  observations: string = ''
 ): AuditResult {
   const systemRows = getShipmentsForHu(data, huId);
 
@@ -139,6 +140,7 @@ export function runAudit(
     date,
     shift,
     subca: mainSubca,
+    observations,
     systemShipments: systemRows.map((r) => r.shipmentId),
     scannedShipments: scannedIds,
     results,
@@ -169,12 +171,13 @@ export function computeDailyStats(audits: AuditResult[]) {
     .map(([date, list]) => {
       const totalHusAudited = list.length;
       const husWithDeviation = list.filter(
-        (a) => a.totalMissing > 0 || a.totalSurplus > 0 || a.totalCrossed > 0
+        (a) => a.totalMissing > 0 || a.totalCrossed > 0 || a.totalUnmanifested > 0
       ).length;
       const totalShipmentsAudited = list.reduce((s, a) => s + a.totalSystem, 0);
       const totalMissing = list.reduce((s, a) => s + a.totalMissing, 0);
-      const totalSurplus = list.reduce((s, a) => s + a.totalSurplus, 0);
-      const totalWithErrors = totalMissing + totalSurplus;
+      const totalCrossed = list.reduce((s, a) => s + a.totalCrossed, 0);
+      const totalUnmanifested = list.reduce((s, a) => s + a.totalUnmanifested, 0);
+      const totalWithErrors = totalMissing + totalCrossed + totalUnmanifested;
       return {
         date,
         totalHusAudited,
@@ -185,7 +188,8 @@ export function computeDailyStats(audits: AuditResult[]) {
             : 0,
         totalShipmentsAudited,
         totalMissing,
-        totalSurplus,
+        totalCrossed,
+        totalUnmanifested,
         totalDamaged: 0,
         percentWithErrors:
           totalShipmentsAudited > 0
@@ -211,7 +215,8 @@ export function computeSubcaStats(audits: AuditResult[]) {
     husAuditados: list.length,
     totalShipments: list.reduce((s, a) => s + a.totalSystem, 0),
     totalMissing: list.reduce((s, a) => s + a.totalMissing, 0),
-    totalSurplus: list.reduce((s, a) => s + a.totalSurplus, 0),
+    totalCrossed: list.reduce((s, a) => s + a.totalCrossed, 0),
+    totalUnmanifested: list.reduce((s, a) => s + a.totalUnmanifested, 0),
     totalOk: list.reduce((s, a) => s + a.totalOk, 0),
   }));
 }
@@ -229,7 +234,7 @@ export function computeUserStats(audits: AuditResult[]) {
       const s = byUser.get(user) ?? { hus: 0, shipments: 0, errors: 0 };
       s.hus += 1;
       s.shipments += a.totalSystem;
-      s.errors += a.totalMissing + a.totalSurplus;
+      s.errors += a.totalMissing + a.totalCrossed + a.totalUnmanifested;
       byUser.set(user, s);
     }
   }

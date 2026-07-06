@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import type { AuditResult } from '@/lib/types';
 
 interface SubcaRow {
@@ -8,7 +7,8 @@ interface SubcaRow {
   husAuditados: number;
   totalShipments: number;
   totalMissing: number;
-  totalSurplus: number;
+  totalCrossed: number;
+  totalUnmanifested: number;
   totalOk: number;
 }
 
@@ -26,19 +26,20 @@ export default function SubcaTable({ data, audits }: SubcaTableProps) {
     );
   }
 
-  // Por sub-ca, también agrupar por usuario de armado
-  const usersBySubca = new Map<string, Map<string, { hus: number; shipments: number; missing: number; surplus: number }>>();
+  // Agrupa por sub-ca → usuario de armado
+  type UserStats = { hus: number; shipments: number; missing: number; crossed: number; unmanifested: number };
+  const usersBySubca = new Map<string, Map<string, UserStats>>();
+
   for (const audit of audits) {
     for (const user of audit.assemblyUsers) {
-      if (!usersBySubca.has(audit.subca)) {
-        usersBySubca.set(audit.subca, new Map());
-      }
+      if (!usersBySubca.has(audit.subca)) usersBySubca.set(audit.subca, new Map());
       const map = usersBySubca.get(audit.subca)!;
-      const s = map.get(user) ?? { hus: 0, shipments: 0, missing: 0, surplus: 0 };
-      s.hus += 1;
-      s.shipments += audit.totalSystem;
-      s.missing += audit.totalMissing;
-      s.surplus += audit.totalSurplus;
+      const s = map.get(user) ?? { hus: 0, shipments: 0, missing: 0, crossed: 0, unmanifested: 0 };
+      s.hus          += 1;
+      s.shipments    += audit.totalSystem;
+      s.missing      += audit.totalMissing;
+      s.crossed      += audit.totalCrossed;
+      s.unmanifested += audit.totalUnmanifested;
       map.set(user, s);
     }
   }
@@ -50,14 +51,16 @@ export default function SubcaTable({ data, audits }: SubcaTableProps) {
           <tr>
             <th className="px-3 py-2.5 text-left font-semibold">Sub-CA</th>
             <th className="px-3 py-2.5 text-right font-semibold">HUs Auditados</th>
-            <th className="px-3 py-2.5 text-right font-semibold">Q Faltante</th>
-            <th className="px-3 py-2.5 text-right font-semibold">Q Sobrante</th>
+            <th className="px-3 py-2.5 text-right font-semibold">Q Faltantes</th>
+            <th className="px-3 py-2.5 text-right font-semibold">Q Cruzados</th>
+            <th className="px-3 py-2.5 text-right font-semibold">Q Sin Manifestar</th>
             <th className="px-3 py-2.5 text-right font-semibold">Total Analizados</th>
             <th className="px-3 py-2.5 text-left font-semibold">Usuario de Armado</th>
-            <th className="px-3 py-2.5 text-right font-semibold">HU Auditados x Usuario</th>
-            <th className="px-3 py-2.5 text-right font-semibold">Q Faltantes</th>
-            <th className="px-3 py-2.5 text-right font-semibold">Q Sobrantes</th>
-            <th className="px-3 py-2.5 text-right font-semibold">Total Analizados</th>
+            <th className="px-3 py-2.5 text-right font-semibold">HUs x Usuario</th>
+            <th className="px-3 py-2.5 text-right font-semibold">Faltantes</th>
+            <th className="px-3 py-2.5 text-right font-semibold">Cruzados</th>
+            <th className="px-3 py-2.5 text-right font-semibold">Sin Manifestar</th>
+            <th className="px-3 py-2.5 text-right font-semibold">Total</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100">
@@ -71,9 +74,10 @@ export default function SubcaTable({ data, audits }: SubcaTableProps) {
                   <td className="px-3 py-2 font-semibold text-zinc-800">{row.subca}</td>
                   <td className="px-3 py-2 text-right">{row.husAuditados}</td>
                   <td className="px-3 py-2 text-right text-red-600">{row.totalMissing}</td>
-                  <td className="px-3 py-2 text-right text-orange-600">{row.totalSurplus}</td>
+                  <td className="px-3 py-2 text-right text-yellow-600">{row.totalCrossed}</td>
+                  <td className="px-3 py-2 text-right text-orange-600">{row.totalUnmanifested}</td>
                   <td className="px-3 py-2 text-right">{row.totalShipments}</td>
-                  <td colSpan={5} className="px-3 py-2 text-zinc-400 text-center">—</td>
+                  <td colSpan={6} className="px-3 py-2 text-zinc-400 text-center">—</td>
                 </tr>
               );
             }
@@ -85,27 +89,19 @@ export default function SubcaTable({ data, audits }: SubcaTableProps) {
               >
                 {idx === 0 ? (
                   <>
-                    <td className="px-3 py-2 font-semibold text-zinc-800" rowSpan={userRows.length}>
-                      {row.subca}
-                    </td>
-                    <td className="px-3 py-2 text-right" rowSpan={userRows.length}>
-                      {row.husAuditados}
-                    </td>
-                    <td className="px-3 py-2 text-right text-red-600" rowSpan={userRows.length}>
-                      {row.totalMissing}
-                    </td>
-                    <td className="px-3 py-2 text-right text-orange-600" rowSpan={userRows.length}>
-                      {row.totalSurplus}
-                    </td>
-                    <td className="px-3 py-2 text-right" rowSpan={userRows.length}>
-                      {row.totalShipments}
-                    </td>
+                    <td className="px-3 py-2 font-semibold text-zinc-800" rowSpan={userRows.length}>{row.subca}</td>
+                    <td className="px-3 py-2 text-right" rowSpan={userRows.length}>{row.husAuditados}</td>
+                    <td className="px-3 py-2 text-right text-red-600" rowSpan={userRows.length}>{row.totalMissing}</td>
+                    <td className="px-3 py-2 text-right text-yellow-600" rowSpan={userRows.length}>{row.totalCrossed}</td>
+                    <td className="px-3 py-2 text-right text-orange-600" rowSpan={userRows.length}>{row.totalUnmanifested}</td>
+                    <td className="px-3 py-2 text-right" rowSpan={userRows.length}>{row.totalShipments}</td>
                   </>
                 ) : null}
                 <td className="px-3 py-2 text-zinc-700">{user}</td>
                 <td className="px-3 py-2 text-right">{stats.hus}</td>
                 <td className="px-3 py-2 text-right text-red-600">{stats.missing}</td>
-                <td className="px-3 py-2 text-right text-orange-600">{stats.surplus}</td>
+                <td className="px-3 py-2 text-right text-yellow-600">{stats.crossed}</td>
+                <td className="px-3 py-2 text-right text-orange-600">{stats.unmanifested}</td>
                 <td className="px-3 py-2 text-right">{stats.shipments}</td>
               </tr>
             ));

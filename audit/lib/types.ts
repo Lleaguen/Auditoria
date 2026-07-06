@@ -87,17 +87,18 @@ export interface AuditResult {
   date: string;
   shift: string;
   subca: string;
-  systemShipments: string[];       // IDs según sistema
-  scannedShipments: string[];      // IDs bipeados
+  observations: string;          // observaciones libres del auditor
+  systemShipments: string[];
+  scannedShipments: string[];
   results: ScannedShipment[];
   totalSystem: number;
   totalScanned: number;
   totalOk: number;
   totalMissing: number;
-  totalCrossed: number;      // pertenece a otro HU
-  totalUnmanifested: number; // no existe en ningún HU del dataset
-  assemblyUsers: string[];         // Usuarios que armaron el HU
-  crossedHus: string[];            // HUs de sub-ca encontrados
+  totalCrossed: number;
+  totalUnmanifested: number;
+  assemblyUsers: string[];
+  crossedHus: string[];
 }
 
 // ── Datos para el dashboard ──────────────────────────────────────────────────
@@ -109,7 +110,8 @@ export interface DailyStats {
   percentHusWithDeviation: number;
   totalShipmentsAudited: number;
   totalMissing: number;
-  totalSurplus: number;
+  totalCrossed: number;
+  totalUnmanifested: number;
   totalDamaged: number;
   percentWithErrors: number;
 }

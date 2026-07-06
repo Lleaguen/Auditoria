@@ -71,7 +71,7 @@ export function ShipmentErrorChart({ data }: DailyChartProps) {
   return (
     <div className="bg-white border border-zinc-200 rounded-xl p-4 shadow-sm">
       <h3 className="text-sm font-semibold text-zinc-700 mb-3">
-        Shipments faltantes y sobrantes por día
+        Shipments faltantes, cruzados y sin manifestar por día
       </h3>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
@@ -80,8 +80,9 @@ export function ShipmentErrorChart({ data }: DailyChartProps) {
           <YAxis tick={{ fontSize: 11 }} />
           <Tooltip />
           <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Bar dataKey="totalMissing" name="Faltantes" fill="#ef4444" radius={[3, 3, 0, 0]} />
-          <Bar dataKey="totalSurplus" name="Sobrantes" fill="#f97316" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="totalMissing"      name="Faltantes"       fill="#ef4444" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="totalCrossed"      name="Cruzados"        fill="#eab308" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="totalUnmanifested" name="Sin manifestar"  fill="#f97316" radius={[3, 3, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

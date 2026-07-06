@@ -1,12 +1,15 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useAppStore } from '@/lib/store';
-import { useDashboardData } from '@/lib/useDashboardData';
+import {
+  computeDailyStats,
+  computeSubcaStats,
+  computeUserStats,
+} from '@/lib/audit-engine';
 import StatCard from '@/components/ui/StatCard';
 import DailyStatsTable from './DailyStatsTable';
 import SubcaTable from './SubcaTable';
-import ExportButton from './ExportButton';
 import {
   DailyDeviationChart,
   DeviationPercentChart,
@@ -21,60 +24,38 @@ import {
   TrendingDown,
   Trash2,
   Users,
-  RefreshCw,
 } from 'lucide-react';
 import type { AuditResult } from '@/lib/types';
-import { deleteAuditById } from '@/lib/api';
 
 export default function DashboardPanel() {
-  const { state } = useAppStore();
-  const { audits, dailyStats, subcaStats, userStats, totals, loading, error, reload } =
-    useDashboardData();
+  const { state, deleteAudit } = useAppStore();
+  const audits = state.audits;
 
-  // ── Estados de carga / error ─────────────────────────────────────────────
+  const dailyStats  = useMemo(() => computeDailyStats(audits),  [audits]);
+  const subcaStats  = useMemo(() => computeSubcaStats(audits),  [audits]);
+  const userStats   = useMemo(() => computeUserStats(audits),   [audits]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24 text-zinc-400 gap-3">
-        <RefreshCw size={18} className="animate-spin" />
-        <span className="text-sm">Cargando auditorías desde la base de datos...</span>
-      </div>
-    );
-  }
-
-  if (error || !state.backendOnline) {
-    return (
-      <div className="text-center py-20 bg-white rounded-2xl border border-zinc-200/80 shadow-sm">
-        <div className="bg-red-50 w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <BarChart2 size={24} className="text-red-400" />
-        </div>
-        <p className="font-semibold text-zinc-700">Backend offline</p>
-        <p className="text-sm text-zinc-400 mt-1 mb-4">
-          El servidor local no está disponible. Inicialo con{' '}
-          <code className="bg-zinc-100 px-1.5 py-0.5 rounded text-xs font-mono">npm run dev</code>
-        </p>
-        {error && (
-          <p className="text-xs text-red-400 mb-4">{error}</p>
-        )}
-        <button
-          onClick={reload}
-          className="flex items-center gap-2 mx-auto text-sm text-indigo-600 hover:text-indigo-800 font-medium"
-        >
-          <RefreshCw size={13} /> Reintentar
-        </button>
-      </div>
-    );
-  }
+  const totals = useMemo(() => {
+    const totalHus          = audits.length;
+    const totalShipments    = audits.reduce((s, a) => s + a.totalSystem, 0);
+    const totalMissing      = audits.reduce((s, a) => s + a.totalMissing, 0);
+    const totalCrossed      = audits.reduce((s, a) => s + a.totalCrossed, 0);
+    const totalUnmanifested = audits.reduce((s, a) => s + a.totalUnmanifested, 0);
+    const husWithDeviation  = audits.filter(
+      (a) => a.totalMissing > 0 || a.totalCrossed > 0 || a.totalUnmanifested > 0
+    ).length;
+    return { totalHus, totalShipments, totalMissing, totalCrossed, totalUnmanifested, husWithDeviation };
+  }, [audits]);
 
   if (audits.length === 0) {
     return (
-      <div className="text-center py-24 bg-white rounded-2xl border border-zinc-200/80 shadow-sm">
+      <div className="text-center py-24 bg-white rounded-2xl border border-zinc-200 shadow-sm">
         <div className="bg-zinc-100 w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <BarChart2 size={24} className="text-zinc-300" />
         </div>
         <p className="font-semibold text-zinc-600">Sin auditorías todavía</p>
         <p className="text-sm text-zinc-400 mt-1">
-          Realizá y guardá auditorías en la sección "Auditoría HU" para ver las métricas.
+          Realizá y guardá auditorías en "Auditoría HU" para ver las métricas.
         </p>
       </div>
     );
@@ -82,6 +63,7 @@ export default function DashboardPanel() {
 
   return (
     <div className="space-y-8">
+
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard
@@ -112,8 +94,14 @@ export default function DashboardPanel() {
           icon={<PackageX size={14} />}
         />
         <StatCard
-          label="Sobrantes"
-          value={totals.totalSurplus.toLocaleString()}
+          label="Cruzados"
+          value={totals.totalCrossed.toLocaleString()}
+          colorClass="text-yellow-600"
+          icon={<PackagePlus size={14} />}
+        />
+        <StatCard
+          label="Sin manifestar"
+          value={totals.totalUnmanifested.toLocaleString()}
           colorClass="text-orange-600"
           icon={<PackagePlus size={14} />}
         />
@@ -129,11 +117,8 @@ export default function DashboardPanel() {
         </div>
       </Section>
 
-      {/* Tabla diaria + export */}
-      <Section
-        title="Detalle por fecha"
-        action={<ExportButton data={dailyStats} />}
-      >
+      {/* Tabla diaria */}
+      <Section title="Detalle por fecha">
         <DailyStatsTable data={dailyStats} />
       </Section>
 
@@ -142,9 +127,9 @@ export default function DashboardPanel() {
         <SubcaTable data={subcaStats} audits={audits} />
       </Section>
 
-      {/* Usuarios */}
+      {/* Ranking usuarios */}
       <Section title="Ranking por tasa de error" icon={<Users size={14} />}>
-        <div className="rounded-2xl border border-zinc-200/80 overflow-hidden shadow-sm">
+        <div className="rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-zinc-900 text-zinc-300">
@@ -176,61 +161,46 @@ export default function DashboardPanel() {
 
       {/* Historial */}
       <Section title="Historial de auditorías">
-        <AuditHistoryTable audits={audits} onDelete={reload} />
+        <AuditHistoryTable audits={audits} onDelete={deleteAudit} />
       </Section>
+
     </div>
   );
 }
 
-// ── Componente de sección ────────────────────────────────────────────────────
+// ── Sección ──────────────────────────────────────────────────────────────────
 
 function Section({
   title,
   icon,
-  action,
   children,
 }: {
   title: string;
   icon?: React.ReactNode;
-  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <section className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-sm font-bold text-zinc-700 uppercase tracking-wide">
-          {icon}
-          {title}
-        </h2>
-        {action}
-      </div>
+      <h2 className="flex items-center gap-2 text-sm font-bold text-zinc-700 uppercase tracking-wide">
+        {icon}
+        {title}
+      </h2>
       {children}
     </section>
   );
 }
 
-// ── Historial ────────────────────────────────────────────────────────────────
+// ── Historial ─────────────────────────────────────────────────────────────────
 
 function AuditHistoryTable({
   audits,
   onDelete,
 }: {
   audits: AuditResult[];
-  onDelete: () => Promise<void>;
+  onDelete: (huId: string) => void;
 }) {
-  const handleDelete = async (id: number | undefined) => {
-    if (!id) return;
-    if (!confirm('¿Eliminar esta auditoría?')) return;
-    try {
-      await deleteAuditById(id);
-      await onDelete();
-    } catch {
-      alert('Error al eliminar. Verificá que el backend esté corriendo.');
-    }
-  };
-
   return (
-    <div className="rounded-2xl border border-zinc-200/80 overflow-hidden shadow-sm">
+    <div className="rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
@@ -243,8 +213,8 @@ function AuditHistoryTable({
               <th className="px-4 py-3 text-right font-semibold">Bipeados</th>
               <th className="px-4 py-3 text-right font-semibold">OK</th>
               <th className="px-4 py-3 text-right font-semibold">Faltantes</th>
-              <th className="px-4 py-3 text-right font-semibold">Sobrantes</th>
               <th className="px-4 py-3 text-right font-semibold">Cruzados</th>
+              <th className="px-4 py-3 text-right font-semibold">Sin Manifestar</th>
               <th className="px-4 py-3 text-left font-semibold">Usuarios armado</th>
               <th className="px-4 py-3 text-center font-semibold"></th>
             </tr>
@@ -269,22 +239,24 @@ function AuditHistoryTable({
                   </span>
                 </td>
                 <td className="px-4 py-2.5 text-right">
-                  <span className={a.totalSurplus > 0 ? 'text-orange-600 font-bold' : 'text-zinc-300'}>
-                    {a.totalSurplus}
-                  </span>
-                </td>
-                <td className="px-4 py-2.5 text-right">
-                  <span className={a.totalCrossed > 0 ? 'text-amber-600 font-bold' : 'text-zinc-300'}>
+                  <span className={a.totalCrossed > 0 ? 'text-yellow-600 font-bold' : 'text-zinc-300'}>
                     {a.totalCrossed}
                   </span>
                 </td>
-                <td className="px-4 py-2.5 text-zinc-400 max-w-[160px] truncate font-mono text-[11px]"
-                  title={a.assemblyUsers.join(', ')}>
+                <td className="px-4 py-2.5 text-right">
+                  <span className={a.totalUnmanifested > 0 ? 'text-orange-600 font-bold' : 'text-zinc-300'}>
+                    {a.totalUnmanifested}
+                  </span>
+                </td>
+                <td
+                  className="px-4 py-2.5 text-zinc-400 max-w-[160px] truncate font-mono text-[11px]"
+                  title={a.assemblyUsers.join(', ')}
+                >
                   {a.assemblyUsers.join(', ') || '—'}
                 </td>
                 <td className="px-4 py-2.5 text-center">
                   <button
-                    onClick={() => handleDelete(a.id)}
+                    onClick={() => onDelete(a.huId)}
                     className="text-zinc-200 hover:text-red-400 hover:bg-red-50 p-1.5 rounded-lg transition-all"
                     title="Eliminar"
                   >
