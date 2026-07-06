@@ -78,18 +78,17 @@ export function runAudit(
     });
   }
 
-  // 2. Verificar los bipeados que no están en sistema: SOBRANTE o CRUZADO
+  // 2. Verificar los bipeados que no están en sistema: CRUZADO o SIN MANIFESTAR
   for (const scannedId of scannedIds) {
     const trimmed = scannedId.trim();
     if (!trimmed) continue;
     if (systemIds.has(trimmed)) continue; // ya procesado arriba
 
-    // Buscar en todo el dataset para ver si está en otro HU
+    // Buscar en todo el dataset
     const found = data.find((r) => r.shipmentId === trimmed);
 
     if (found && !matchHuId(found.outboundId, huId)) {
-      // Es de otro HU — determinar si es la misma sub-ca (cruzado) o sobrante
-      const isSameSubca = found.labelingZone === mainSubca;
+      // Pertenece a otro HU → CRUZADO (sin importar sub-ca)
       const dispatched =
         (found.statusDescription || found.hubStatus || '')
           .toLowerCase()
@@ -98,7 +97,7 @@ export function runAudit(
 
       results.push({
         shipmentId: trimmed,
-        status: isSameSubca ? 'crossed' : 'surplus',
+        status: 'crossed',
         subca: found.labelingZone || 'N/A',
         statusDescription: found.statusDescription || found.hubStatus || '',
         labelingLastPrintUser: found.labelingLastPrintUser || '',
@@ -108,10 +107,10 @@ export function runAudit(
         crossedFromHu: found.outboundId,
       });
     } else {
-      // No encontrado en dataset — sobrante sin registro
+      // No encontrado en ningún HU del dataset → SIN MANIFESTAR
       results.push({
         shipmentId: trimmed,
-        status: 'surplus',
+        status: 'unmanifested',
         subca: 'N/A',
         statusDescription: '',
         labelingLastPrintUser: '',
@@ -132,8 +131,8 @@ export function runAudit(
 
   const totalOk = results.filter((r) => r.status === 'ok').length;
   const totalMissing = results.filter((r) => r.status === 'missing').length;
-  const totalSurplus = results.filter((r) => r.status === 'surplus').length;
   const totalCrossed = results.filter((r) => r.status === 'crossed').length;
+  const totalUnmanifested = results.filter((r) => r.status === 'unmanifested').length;
 
   return {
     huId,
@@ -147,8 +146,8 @@ export function runAudit(
     totalScanned: scannedIds.length,
     totalOk,
     totalMissing,
-    totalSurplus,
     totalCrossed,
+    totalUnmanifested,
     assemblyUsers: [...assemblyUsersSet],
     crossedHus: [...crossedHusSet],
   };
