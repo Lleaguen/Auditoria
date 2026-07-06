@@ -17,7 +17,6 @@ export default function ExportButton({ data }: ExportButtonProps) {
     setLoading(true);
 
     try {
-      // Armar filas con exactamente las columnas requeridas
       const rows = data.map((d) => ({
         'FECHA':                          d.date,
         'Q HU AUDITADOS':                 d.totalHusAudited,
@@ -25,46 +24,51 @@ export default function ExportButton({ data }: ExportButtonProps) {
         '% DE HU CON DESVIOS':            `${d.percentHusWithDeviation.toFixed(2)}%`,
         'Q ENVIOS TOT AUDITADOS':         d.totalShipmentsAudited,
         'Q ENVIOS FALTANTES':             d.totalMissing,
-        'Q DE ENVIOS SOBRANTES':          d.totalSurplus,
+        'Q DE ENVIOS CRUZADOS':           d.totalCrossed,
+        'Q DE ENVIOS SIN MANIFESTAR':     d.totalUnmanifested,
         'Q DE ENVIOS DAÑADOS':            d.totalDamaged,
         '% DE ENVIOS CON ERRORES DETECT': `${d.percentWithErrors.toFixed(2)}%`,
       }));
 
-      // Fila de totales al final
-      const totalHus       = data.reduce((s, d) => s + d.totalHusAudited, 0);
-      const totalDesvios   = data.reduce((s, d) => s + d.husWithDeviation, 0);
-      const totalShipments = data.reduce((s, d) => s + d.totalShipmentsAudited, 0);
-      const totalMissing   = data.reduce((s, d) => s + d.totalMissing, 0);
-      const totalSurplus   = data.reduce((s, d) => s + d.totalSurplus, 0);
-      const totalDamaged   = data.reduce((s, d) => s + d.totalDamaged, 0);
+      // Fila de totales
+      const totalHus          = data.reduce((s, d) => s + d.totalHusAudited, 0);
+      const totalDesvios      = data.reduce((s, d) => s + d.husWithDeviation, 0);
+      const totalShipments    = data.reduce((s, d) => s + d.totalShipmentsAudited, 0);
+      const totalMissing      = data.reduce((s, d) => s + d.totalMissing, 0);
+      const totalCrossed      = data.reduce((s, d) => s + d.totalCrossed, 0);
+      const totalUnmanifested = data.reduce((s, d) => s + d.totalUnmanifested, 0);
+      const totalDamaged      = data.reduce((s, d) => s + d.totalDamaged, 0);
+      const totalErrors       = totalMissing + totalCrossed + totalUnmanifested;
 
       rows.push({
         'FECHA':                          'TOTAL',
         'Q HU AUDITADOS':                 totalHus,
         'Q HU CON DESVIOS':               totalDesvios,
-        '% DE HU CON DESVIOS':            totalHus > 0 ? `${((totalDesvios / totalHus) * 100).toFixed(2)}%` : '0.00%',
+        '% DE HU CON DESVIOS':            totalHus > 0
+          ? `${((totalDesvios / totalHus) * 100).toFixed(2)}%`
+          : '0.00%',
         'Q ENVIOS TOT AUDITADOS':         totalShipments,
         'Q ENVIOS FALTANTES':             totalMissing,
-        'Q DE ENVIOS SOBRANTES':          totalSurplus,
+        'Q DE ENVIOS CRUZADOS':           totalCrossed,
+        'Q DE ENVIOS SIN MANIFESTAR':     totalUnmanifested,
         'Q DE ENVIOS DAÑADOS':            totalDamaged,
         '% DE ENVIOS CON ERRORES DETECT': totalShipments > 0
-          ? `${(((totalMissing + totalSurplus) / totalShipments) * 100).toFixed(2)}%`
+          ? `${((totalErrors / totalShipments) * 100).toFixed(2)}%`
           : '0.00%',
       });
 
       const ws = XLSX.utils.json_to_sheet(rows);
-
-      // Ancho de columnas
       ws['!cols'] = [
-        { wch: 12 }, // FECHA
-        { wch: 16 }, // Q HU AUDITADOS
-        { wch: 17 }, // Q HU CON DESVIOS
-        { wch: 20 }, // % DE HU CON DESVIOS
-        { wch: 24 }, // Q ENVIOS TOT AUDITADOS
-        { wch: 20 }, // Q ENVIOS FALTANTES
-        { wch: 22 }, // Q DE ENVIOS SOBRANTES
-        { wch: 20 }, // Q DE ENVIOS DAÑADOS
-        { wch: 28 }, // % DE ENVIOS CON ERRORES DETECT
+        { wch: 12 },
+        { wch: 16 },
+        { wch: 17 },
+        { wch: 20 },
+        { wch: 24 },
+        { wch: 20 },
+        { wch: 24 },
+        { wch: 26 },
+        { wch: 20 },
+        { wch: 28 },
       ];
 
       const wb = XLSX.utils.book_new();

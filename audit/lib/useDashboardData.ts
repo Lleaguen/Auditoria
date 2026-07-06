@@ -14,7 +14,8 @@ export interface DashboardData {
     totalHus: number;
     totalShipments: number;
     totalMissing: number;
-    totalSurplus: number;
+    totalCrossed: number;
+    totalUnmanifested: number;
     husWithDeviation: number;
   };
   loading: boolean;
@@ -49,12 +50,13 @@ export function useDashboardData(filters?: AuditFilters): DashboardData {
   const userStats  = computeUserStats(audits);
 
   const totals = {
-    totalHus:         audits.length,
-    totalShipments:   audits.reduce((s, a) => s + a.totalSystem, 0),
-    totalMissing:     audits.reduce((s, a) => s + a.totalMissing, 0),
-    totalSurplus:     audits.reduce((s, a) => s + a.totalSurplus, 0),
-    husWithDeviation: audits.filter(
-      (a) => a.totalMissing > 0 || a.totalSurplus > 0 || a.totalCrossed > 0
+    totalHus:          audits.length,
+    totalShipments:    audits.reduce((s, a) => s + a.totalSystem, 0),
+    totalMissing:      audits.reduce((s, a) => s + a.totalMissing, 0),
+    totalCrossed:      audits.reduce((s, a) => s + a.totalCrossed, 0),
+    totalUnmanifested: audits.reduce((s, a) => s + a.totalUnmanifested, 0),
+    husWithDeviation:  audits.filter(
+      (a) => a.totalMissing > 0 || a.totalCrossed > 0 || a.totalUnmanifested > 0
     ).length,
   };
 

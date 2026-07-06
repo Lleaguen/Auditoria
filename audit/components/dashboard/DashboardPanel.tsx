@@ -197,8 +197,14 @@ function AuditHistoryTable({
   onDelete,
 }: {
   audits: AuditResult[];
-  onDelete: (huId: string) => void;
+  onDelete: (id: number) => Promise<void>;
 }) {
+  const handleDelete = async (a: AuditResult) => {
+    if (a.id == null) return;
+    if (!confirm(`¿Eliminar la auditoría del HU ${a.huId}?`)) return;
+    await onDelete(a.id);
+  };
+
   return (
     <div className="rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
@@ -256,8 +262,9 @@ function AuditHistoryTable({
                 </td>
                 <td className="px-4 py-2.5 text-center">
                   <button
-                    onClick={() => onDelete(a.huId)}
-                    className="text-zinc-200 hover:text-red-400 hover:bg-red-50 p-1.5 rounded-lg transition-all"
+                    onClick={() => handleDelete(a)}
+                    disabled={a.id == null}
+                    className="text-zinc-200 hover:text-red-400 hover:bg-red-50 p-1.5 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                     title="Eliminar"
                   >
                     <Trash2 size={12} />
@@ -271,3 +278,4 @@ function AuditHistoryTable({
     </div>
   );
 }
+
