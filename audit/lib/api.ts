@@ -1,11 +1,10 @@
 import type { AuditResult } from './types';
 
-// En el browser las rutas /api/* son relativas al mismo origen.
-// En SSR (server components) necesitamos la URL absoluta.
-function baseUrl() {
-  if (typeof window !== 'undefined') return ''; // browser: relativo
-  return process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-}
+// ── Cliente HTTP hacia el backend local ──────────────────────────────────────
+// NEXT_PUBLIC_API_URL se inyecta en build time desde GitHub Actions vars.API_URL
+// En desarrollo local apunta a localhost:3001
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -15,7 +14,7 @@ interface ApiResponse<T> {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const url = `${baseUrl()}${path}`;
+  const url = `${BASE_URL}${path}`;
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     ...options,
@@ -63,7 +62,7 @@ export async function deleteAuditById(id: number): Promise<void> {
 
 export async function checkBackendHealth(): Promise<boolean> {
   try {
-    const res = await fetch(`${baseUrl()}/api/health`, {
+    const res = await fetch(`${BASE_URL}/health`, {
       signal: AbortSignal.timeout(3000),
     });
     return res.ok;

@@ -66,8 +66,8 @@ export interface ShipmentRow {
 export type ShipmentScanStatus =
   | 'ok'              // bipeado y coincide con sistema del HU
   | 'missing'         // en sistema pero no bipeado (faltante)
-  | 'crossed'         // bipeado pero pertenece a otro HU (cruzado)
-  | 'unmanifested';   // bipeado pero no existe en ningún HU del dataset (sin manifestar)
+  | 'surplus'         // bipeado pero no estaba en sistema (sobrante)
+  | 'crossed';        // bipeado pero pertenece a otro HU (cruzado)
 
 export interface ScannedShipment {
   shipmentId: string;
@@ -87,7 +87,6 @@ export interface AuditResult {
   date: string;
   shift: string;
   subca: string;
-  observations: string;          // observaciones libres del auditor
   systemShipments: string[];
   scannedShipments: string[];
   results: ScannedShipment[];
@@ -95,8 +94,8 @@ export interface AuditResult {
   totalScanned: number;
   totalOk: number;
   totalMissing: number;
+  totalSurplus: number;
   totalCrossed: number;
-  totalUnmanifested: number;
   assemblyUsers: string[];
   crossedHus: string[];
 }
