@@ -30,6 +30,20 @@ type Action =
   | { type: 'SET_BACKEND_ONLINE'; payload: boolean }
   | { type: 'SET_LOADING_AUDITS'; payload: boolean };
 
+// Normaliza una auditoría para garantizar que todos los campos numéricos existen.
+// Necesario para auditorías creadas antes de que se agregaran nuevos campos.
+function normalizeAudit(a: AuditResult): AuditResult {
+  return {
+    ...a,
+    observations:      a.observations      ?? '',
+    totalCrossed:      a.totalCrossed      ?? 0,
+    totalUnmanifested: a.totalUnmanifested ?? 0,
+    crossedHus:        a.crossedHus        ?? [],
+    assemblyUsers:     a.assemblyUsers     ?? [],
+    results:           a.results           ?? [],
+  };
+}
+
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'SET_CSV':
@@ -37,13 +51,13 @@ function reducer(state: AppState, action: Action): AppState {
     case 'CLEAR_CSV':
       return { ...state, csvData: [], csvFileName: '' };
     case 'SET_AUDITS':
-      return { ...state, audits: action.payload };
+      return { ...state, audits: action.payload.map(normalizeAudit) };
     case 'ADD_AUDIT': {
-      // Reemplaza si ya existe la misma auditoría (mismo HU + fecha)
+      const normalized = normalizeAudit(action.payload);
       const filtered = state.audits.filter(
-        (a) => !(a.huId === action.payload.huId && a.date === action.payload.date)
+        (a) => !(a.huId === normalized.huId && a.date === normalized.date)
       );
-      return { ...state, audits: [action.payload, ...filtered] };
+      return { ...state, audits: [normalized, ...filtered] };
     }
     case 'REMOVE_AUDIT':
       return {
