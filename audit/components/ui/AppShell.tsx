@@ -10,17 +10,30 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
 
+  // usePathname() devuelve la ruta sin basePath (/login),
+  // pero window.location.pathname incluye el basePath (/Auditoria/login).
+  // Verificamos ambas para evitar bucles.
   const isLoginPage = pathname === '/login' || pathname.endsWith('/login');
 
   useEffect(() => {
     if (loading) return;
+
     if (!user && !isLoginPage) {
-      window.location.replace('/Auditoria/login');
+      const target = '/Auditoria/login';
+      // Evitar redirect si ya estamos en la URL destino
+      if (window.location.pathname !== target) {
+        window.location.replace(target);
+      }
+      return;
     }
+
     if (user && isLoginPage) {
-      window.location.replace('/Auditoria/');
+      const target = '/Auditoria/';
+      if (window.location.pathname !== target) {
+        window.location.replace(target);
+      }
     }
-  }, [user, loading, isLoginPage, router]);
+  }, [user, loading, isLoginPage]);
 
   // Mientras resuelve la sesión
   if (loading) {
