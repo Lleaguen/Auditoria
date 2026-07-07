@@ -75,21 +75,23 @@ export function createAuditRouter(repo: AuditRepository): Router {
       }
 
       const audit = await saveAudit.execute({
-        huId:             body.huId,
-        date:             body.date,
-        shift:            body.shift ?? '',
-        subca:            body.subca ?? '',
-        systemShipments:  body.systemShipments  ?? [],
-        scannedShipments: body.scannedShipments ?? [],
-        results:          body.results          ?? [],
-        totalSystem:      body.totalSystem       ?? 0,
-        totalScanned:     body.totalScanned      ?? 0,
-        totalOk:          body.totalOk           ?? 0,
-        totalMissing:     body.totalMissing      ?? 0,
-        totalSurplus:     body.totalSurplus      ?? 0,
-        totalCrossed:     body.totalCrossed      ?? 0,
-        assemblyUsers:    body.assemblyUsers     ?? [],
-        crossedHus:       body.crossedHus        ?? [],
+        huId:              body.huId,
+        date:              body.date,
+        shift:             body.shift            ?? '',
+        subca:             body.subca            ?? '',
+        observations:      body.observations     ?? '',
+        systemShipments:   body.systemShipments  ?? [],
+        scannedShipments:  body.scannedShipments ?? [],
+        results:           body.results          ?? [],
+        totalSystem:       body.totalSystem      ?? 0,
+        totalScanned:      body.totalScanned     ?? 0,
+        totalOk:           body.totalOk          ?? 0,
+        totalMissing:      body.totalMissing     ?? 0,
+        totalSurplus:      body.totalSurplus     ?? 0,
+        totalCrossed:      body.totalCrossed     ?? 0,
+        totalUnmanifested: body.totalUnmanifested ?? 0,
+        assemblyUsers:     body.assemblyUsers    ?? [],
+        crossedHus:        body.crossedHus       ?? [],
       });
 
       res.status(201).json({ success: true, data: audit });
