@@ -15,10 +15,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return;
     if (!user && !isLoginPage) {
-      router.replace('/login');
+      // En static export con basePath, usar window.location evita que
+      // el router ignore el basePath y redirija fuera del subdirectorio
+      const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+      window.location.replace(`${base}/login`);
     }
     if (user && isLoginPage) {
-      router.replace('/');
+      const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+      window.location.replace(`${base}/`);
     }
   }, [user, loading, isLoginPage, router]);
 
