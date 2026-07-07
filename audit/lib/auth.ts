@@ -9,6 +9,7 @@ export interface AuthUser {
   username: string;
   role: UserRole;
   active: boolean;
+  createdAt?: string;
 }
 
 export interface LoginResponse {
