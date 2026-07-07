@@ -132,6 +132,7 @@ export function runAudit(
 
   const totalOk = results.filter((r) => r.status === 'ok').length;
   const totalMissing = results.filter((r) => r.status === 'missing').length;
+  const totalSurplus = results.filter((r) => r.status === 'surplus').length;
   const totalCrossed = results.filter((r) => r.status === 'crossed').length;
   const totalUnmanifested = results.filter((r) => r.status === 'unmanifested').length;
 
@@ -148,6 +149,7 @@ export function runAudit(
     totalScanned: scannedIds.length,
     totalOk,
     totalMissing,
+    totalSurplus,
     totalCrossed,
     totalUnmanifested,
     assemblyUsers: [...assemblyUsersSet],
