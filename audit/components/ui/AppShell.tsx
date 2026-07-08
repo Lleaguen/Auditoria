@@ -1,39 +1,40 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
 import Sidebar from './Sidebar';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  const pathname = usePathname();
-  const router   = useRouter();
+  const pathname  = usePathname();
+  const router    = useRouter();
+  const redirected = useRef(false);
 
-  // usePathname() devuelve la ruta sin basePath (/login),
-  // pero window.location.pathname incluye el basePath (/Auditoria/login).
-  // Verificamos ambas para evitar bucles.
-  const isLoginPage = pathname === '/login' || pathname.endsWith('/login');
+  // usePathname() puede devolver /login o /Auditoria/login según el entorno.
+  // Normalizamos para comparar solo el segmento final.
+  const cleanPath   = pathname.replace(/^\/Auditoria/, '') || '/';
+  const isLoginPage = cleanPath === '/login';
 
   useEffect(() => {
     if (loading) return;
 
-    if (!user && !isLoginPage) {
-      const target = '/Auditoria/login';
-      // Evitar redirect si ya estamos en la URL destino
-      if (window.location.pathname !== target) {
-        window.location.replace(target);
-      }
+    if (!user && !isLoginPage && !redirected.current) {
+      redirected.current = true;
+      router.replace('/login');
       return;
     }
 
-    if (user && isLoginPage) {
-      const target = '/Auditoria/';
-      if (window.location.pathname !== target) {
-        window.location.replace(target);
-      }
+    if (user && isLoginPage && !redirected.current) {
+      redirected.current = true;
+      router.replace('/');
     }
-  }, [user, loading, isLoginPage]);
+  }, [user, loading, isLoginPage, router]);
+
+  // Resetear el flag cuando cambia el pathname
+  useEffect(() => {
+    redirected.current = false;
+  }, [pathname]);
 
   // Mientras resuelve la sesión
   if (loading) {
