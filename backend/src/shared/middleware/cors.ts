@@ -22,7 +22,7 @@ export const corsMiddleware = cors({
       callback(new Error(`CORS: origen no permitido → ${origin}`));
     }
   },
-  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: false,
 });
