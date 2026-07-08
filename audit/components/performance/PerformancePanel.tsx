@@ -1,20 +1,27 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { fetchAuditorStats, type AuditorStat } from '@/lib/api';
-import { RefreshCw, AlertCircle, TrendingDown, TrendingUp, ClipboardCheck, User } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  Legend, ResponsiveContainer,
+} from 'recharts';
+import {
+  RefreshCw, AlertCircle, TrendingDown, TrendingUp,
+  ClipboardCheck, User, Download,
+} from 'lucide-react';
 
-function getRateColor(rate: number): string {
-  if (rate === 0)   return 'text-emerald-600';
-  if (rate < 2)     return 'text-yellow-600';
-  if (rate < 5)     return 'text-orange-600';
+function getRateColor(rate: number) {
+  if (rate === 0) return 'text-emerald-600';
+  if (rate < 2)   return 'text-yellow-600';
+  if (rate < 5)   return 'text-orange-600';
   return 'text-red-600';
 }
-
-function getRateBg(rate: number): string {
-  if (rate === 0)   return 'bg-emerald-50 border-emerald-200';
-  if (rate < 2)     return 'bg-yellow-50 border-yellow-200';
-  if (rate < 5)     return 'bg-orange-50 border-orange-200';
+function getRateBg(rate: number) {
+  if (rate === 0) return 'bg-emerald-50 border-emerald-200';
+  if (rate < 2)   return 'bg-yellow-50 border-yellow-200';
+  if (rate < 5)   return 'bg-orange-50 border-orange-200';
   return 'bg-red-50 border-red-200';
 }
 
@@ -40,11 +47,40 @@ export default function PerformancePanel() {
 
   useEffect(() => { load(); }, [load]);
 
-  const totalHus       = stats.reduce((s, a) => s + a.husAuditados, 0);
-  const totalShipments = stats.reduce((s, a) => s + a.totalShipments, 0);
-  const avgErrorRate   = stats.length > 0
+  const totalHus     = stats.reduce((s, a) => s + a.husAuditados, 0);
+  const avgErrorRate = stats.length > 0
     ? Math.round(stats.reduce((s, a) => s + a.errorRate, 0) / stats.length * 100) / 100
     : 0;
+
+  // Datos para gráfico de barras acumulado
+  const chartData = useMemo(() =>
+    stats.map((s) => ({
+      name:         s.nombre.split(' ')[0],
+      husAuditados: s.husAuditados,
+      faltantes:    s.totalMissing,
+      cruzados:     s.totalCrossed,
+    })), [stats]);
+
+  const exportExcel = () => {
+    const rows = stats.map((s) => ({
+      'Auditor':        s.nombre,
+      'Username':       s.username,
+      'HUs auditados':  s.husAuditados,
+      'Shipments':      s.totalShipments,
+      'OK':             s.totalOk,
+      'Faltantes':      s.totalMissing,
+      'Sobrantes':      s.totalSurplus,
+      'Cruzados':       s.totalCrossed,
+      'Sin manifestar': s.totalUnmanifested,
+      'Tasa error':     `${s.errorRate}%`,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = Array(10).fill({ wch: 18 });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Rendimiento');
+    const rango = fromDate || toDate ? `_${fromDate ?? ''}_${toDate ?? ''}` : '';
+    XLSX.writeFile(wb, `rendimiento_auditores${rango}.xlsx`);
+  };
 
   return (
     <div className="space-y-6">
@@ -52,50 +88,35 @@ export default function PerformancePanel() {
       {/* Filtros */}
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="text-xs font-semibold text-zinc-400 uppercase tracking-widest block mb-1.5">
-            Desde
-          </label>
-          <input
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="input-base text-sm"
-          />
+          <label className="text-xs font-semibold text-zinc-400 uppercase tracking-widest block mb-1.5">Desde</label>
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="input-base text-sm" />
         </div>
         <div>
-          <label className="text-xs font-semibold text-zinc-400 uppercase tracking-widest block mb-1.5">
-            Hasta
-          </label>
-          <input
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            className="input-base text-sm"
-          />
+          <label className="text-xs font-semibold text-zinc-400 uppercase tracking-widest block mb-1.5">Hasta</label>
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="input-base text-sm" />
         </div>
-        <button
-          onClick={load}
-          className="flex items-center gap-1.5 px-3 py-2 border border-zinc-200 rounded-xl text-xs text-zinc-500 hover:bg-zinc-50"
-        >
+        <button onClick={load} className="flex items-center gap-1.5 px-3 py-2 border border-zinc-200 rounded-xl text-xs text-zinc-500 hover:bg-zinc-50">
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
           Actualizar
         </button>
         {(fromDate || toDate) && (
-          <button
-            onClick={() => { setFromDate(''); setToDate(''); }}
-            className="text-xs text-zinc-400 hover:text-zinc-600 underline"
-          >
+          <button onClick={() => { setFromDate(''); setToDate(''); }} className="text-xs text-zinc-400 hover:text-zinc-600 underline">
             Limpiar filtros
+          </button>
+        )}
+        {stats.length > 0 && (
+          <button onClick={exportExcel} className="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl">
+            <Download size={12} /> Exportar Excel
           </button>
         )}
       </div>
 
-      {/* Totales */}
+      {/* KPIs */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Auditores activos',   value: stats.length,      icon: User },
-          { label: 'HUs auditados',        value: totalHus,          icon: ClipboardCheck },
-          { label: 'Tasa error promedio',  value: `${avgErrorRate}%`, icon: avgErrorRate > 3 ? TrendingDown : TrendingUp },
+          { label: 'Auditores activos',  value: stats.length, icon: User },
+          { label: 'HUs auditados',      value: totalHus,     icon: ClipboardCheck },
+          { label: 'Tasa error promedio', value: `${avgErrorRate}%`, icon: avgErrorRate > 3 ? TrendingDown : TrendingUp },
         ].map(({ label, value, icon: Icon }) => (
           <div key={label} className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-sm flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
@@ -109,11 +130,28 @@ export default function PerformancePanel() {
         ))}
       </div>
 
-      {/* Error */}
       {error && (
         <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm">
-          <AlertCircle size={15} />
-          {error}
+          <AlertCircle size={15} />{error}
+        </div>
+      )}
+
+      {/* Gráfico acumulado por auditor */}
+      {chartData.length > 0 && (
+        <div className="bg-white rounded-2xl border border-zinc-200 p-5 shadow-sm">
+          <h3 className="text-sm font-bold text-zinc-700 mb-4">HUs auditados y errores por auditor (acumulado)</h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Bar dataKey="husAuditados" name="HUs auditados" fill="#6366f1" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="faltantes"    name="Faltantes"     fill="#ef4444" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="cruzados"     name="Cruzados"      fill="#eab308" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
 
@@ -129,7 +167,7 @@ export default function PerformancePanel() {
             <thead>
               <tr className="bg-zinc-900 text-zinc-300">
                 <th className="px-4 py-3 text-left font-semibold">Auditor</th>
-                <th className="px-4 py-3 text-center font-semibold">HUs auditados</th>
+                <th className="px-4 py-3 text-center font-semibold">HUs</th>
                 <th className="px-4 py-3 text-center font-semibold">Shipments</th>
                 <th className="px-4 py-3 text-center font-semibold">OK</th>
                 <th className="px-4 py-3 text-center font-semibold">Faltantes</th>
@@ -165,22 +203,12 @@ export default function PerformancePanel() {
                   </td>
                 </tr>
               ))}
-              {stats.length === 0 && !loading && (
-                <tr>
-                  <td colSpan={8} className="text-center py-12 text-zinc-400 text-sm">
-                    No hay datos de auditorías con auditor registrado.
-                  </td>
-                </tr>
+              {stats.length === 0 && (
+                <tr><td colSpan={8} className="text-center py-12 text-zinc-400 text-sm">No hay datos de auditorías con auditor registrado.</td></tr>
               )}
             </tbody>
           </table>
         </div>
-      )}
-
-      {totalShipments > 0 && (
-        <p className="text-xs text-zinc-400 text-right">
-          Total shipments analizados: <span className="font-semibold text-zinc-600">{totalShipments.toLocaleString('es-AR')}</span>
-        </p>
       )}
     </div>
   );
