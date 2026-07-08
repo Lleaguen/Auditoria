@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 import type { ShipmentRow, AuditResult } from './types';
 import { fetchAudits, saveAudit, deleteAuditById, checkBackendHealth } from './api';
+import { useAuth } from './authContext';
 
 // ── Estado global ────────────────────────────────────────────────────────────
 
@@ -88,6 +89,7 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [state, dispatch] = useReducer(reducer, {
     csvData: [],
     csvFileName: '',
@@ -116,8 +118,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    reloadAudits();
-  }, [reloadAudits]);
+    if (user) {
+      reloadAudits();
+    }
+  }, [reloadAudits, user]);
 
   // ── Guardar auditoría en backend ─────────────────────────────────────────
   const addAudit = useCallback(async (audit: AuditResult) => {

@@ -28,7 +28,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   // Token expirado o inválido → limpiar sesión y recargar
   if (res.status === 401) {
     clearSession();
-    if (typeof window !== 'undefined') window.location.href = '/Auditoria/login';
+    if (typeof window !== 'undefined' && !window.location.pathname.endsWith('/login')) {
+      window.location.href = '/Auditoria/login';
+    }
     throw new Error('Sesión expirada');
   }
 
