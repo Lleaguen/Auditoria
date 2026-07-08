@@ -53,6 +53,73 @@ export function createAuditRouter(repo: AuditRepository, userRepo: UserRepositor
     }
   });
 
+  // ── GET /api/audits/auditor-stats ────────────────────────────────────────
+  // Stats de desempeño por auditor (usa created_by para identificar quién auditó)
+  // Debe estar antes de /:id para que no lo capture
+  router.get('/auditor-stats', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { fromDate, toDate } = req.query as Record<string, string>;
+      const audits = await repo.findAll({
+        fromDate: fromDate || undefined,
+        toDate:   toDate   || undefined,
+      });
+
+      const byAuditor = new Map<number, {
+        husAuditados: number;
+        totalShipments: number;
+        totalMissing: number;
+        totalSurplus: number;
+        totalCrossed: number;
+        totalUnmanifested: number;
+        totalOk: number;
+      }>();
+
+      for (const a of audits) {
+        if (!a.createdBy) continue;
+        const s = byAuditor.get(a.createdBy) ?? {
+          husAuditados: 0, totalShipments: 0, totalMissing: 0,
+          totalSurplus: 0, totalCrossed: 0, totalUnmanifested: 0, totalOk: 0,
+        };
+        s.husAuditados      += 1;
+        s.totalShipments    += a.totalSystem;
+        s.totalMissing      += a.totalMissing;
+        s.totalSurplus      += a.totalSurplus;
+        s.totalCrossed      += a.totalCrossed;
+        s.totalUnmanifested += a.totalUnmanifested;
+        s.totalOk           += a.totalOk;
+        byAuditor.set(a.createdBy, s);
+      }
+
+      const allUsers = await userRepo.findAll();
+      const userMap  = new Map(allUsers.map((u) => [u.id!, u]));
+
+      const result = [...byAuditor.entries()].map(([userId, s]) => {
+        const u = userMap.get(userId);
+        const errorRate = s.totalShipments > 0
+          ? Math.round(((s.totalMissing + s.totalSurplus + s.totalCrossed) / s.totalShipments) * 10000) / 100
+          : 0;
+        return {
+          userId,
+          nombre:            u ? `${u.nombre} ${u.apellido}` : `Usuario #${userId}`,
+          username:          u?.username ?? '',
+          role:              u?.role ?? '',
+          husAuditados:      s.husAuditados,
+          totalShipments:    s.totalShipments,
+          totalOk:           s.totalOk,
+          totalMissing:      s.totalMissing,
+          totalSurplus:      s.totalSurplus,
+          totalCrossed:      s.totalCrossed,
+          totalUnmanifested: s.totalUnmanifested,
+          errorRate,
+        };
+      }).sort((a, b) => b.husAuditados - a.husAuditados);
+
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // ── GET /api/audits/:id ───────────────────────────────────────────────────
   router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -65,7 +132,6 @@ export function createAuditRouter(repo: AuditRepository, userRepo: UserRepositor
   });
 
   // ── POST /api/audits ──────────────────────────────────────────────────────
-  // Body: AuditResult del frontend (mismo shape)
   router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = req.body;
@@ -97,74 +163,6 @@ export function createAuditRouter(repo: AuditRepository, userRepo: UserRepositor
       });
 
       res.status(201).json({ success: true, data: audit });
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  // ── GET /api/audits/auditor-stats ────────────────────────────────────────
-  // Stats de desempeño por auditor (usa created_by para identificar quién auditó)
-  router.get('/auditor-stats', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { fromDate, toDate } = req.query as Record<string, string>;
-      const audits = await repo.findAll({
-        fromDate: fromDate || undefined,
-        toDate:   toDate   || undefined,
-      });
-
-      // Agrupar por created_by
-      const byAuditor = new Map<number, {
-        husAuditados: number;
-        totalShipments: number;
-        totalMissing: number;
-        totalSurplus: number;
-        totalCrossed: number;
-        totalUnmanifested: number;
-        totalOk: number;
-      }>();
-
-      for (const a of audits) {
-        if (!a.createdBy) continue;
-        const s = byAuditor.get(a.createdBy) ?? {
-          husAuditados: 0, totalShipments: 0, totalMissing: 0,
-          totalSurplus: 0, totalCrossed: 0, totalUnmanifested: 0, totalOk: 0,
-        };
-        s.husAuditados    += 1;
-        s.totalShipments  += a.totalSystem;
-        s.totalMissing    += a.totalMissing;
-        s.totalSurplus    += a.totalSurplus;
-        s.totalCrossed    += a.totalCrossed;
-        s.totalUnmanifested += a.totalUnmanifested;
-        s.totalOk         += a.totalOk;
-        byAuditor.set(a.createdBy, s);
-      }
-
-      // Resolver nombres de usuario
-      const allUsers = await userRepo.findAll();
-      const userMap  = new Map(allUsers.map((u) => [u.id!, u]));
-
-      const stats = [...byAuditor.entries()].map(([userId, s]) => {
-        const u = userMap.get(userId);
-        const errorRate = s.totalShipments > 0
-          ? Math.round(((s.totalMissing + s.totalSurplus + s.totalCrossed) / s.totalShipments) * 10000) / 100
-          : 0;
-        return {
-          userId,
-          nombre:            u ? `${u.nombre} ${u.apellido}` : `Usuario #${userId}`,
-          username:          u?.username ?? '',
-          role:              u?.role ?? '',
-          husAuditados:      s.husAuditados,
-          totalShipments:    s.totalShipments,
-          totalOk:           s.totalOk,
-          totalMissing:      s.totalMissing,
-          totalSurplus:      s.totalSurplus,
-          totalCrossed:      s.totalCrossed,
-          totalUnmanifested: s.totalUnmanifested,
-          errorRate,
-        };
-      }).sort((a, b) => b.husAuditados - a.husAuditados);
-
-      res.json({ success: true, data: stats });
     } catch (err) {
       next(err);
     }

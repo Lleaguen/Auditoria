@@ -69,6 +69,19 @@ export async function runMigrations(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_audits_created_by ON audits(created_by);
     CREATE INDEX IF NOT EXISTS idx_results_audit     ON audit_shipment_results(audit_id);
     CREATE INDEX IF NOT EXISTS idx_users_username    ON users(username);
+
+    -- Tabla de planes de auditoría diarios
+    CREATE TABLE IF NOT EXISTS audit_plans (
+      id         SERIAL PRIMARY KEY,
+      date       TEXT NOT NULL,
+      shift      TEXT NOT NULL DEFAULT '',
+      items      JSONB NOT NULL DEFAULT '[]',
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(date, shift)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_plans_date ON audit_plans(date);
   `);
 
   await seedAdminUser(pool);

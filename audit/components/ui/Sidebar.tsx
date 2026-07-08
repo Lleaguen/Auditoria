@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart3, ClipboardCheck, Upload, Warehouse, Users, LogOut, Shield, User } from 'lucide-react';
+import { BarChart3, ClipboardCheck, Upload, Warehouse, Users, LogOut, Shield, User, Target } from 'lucide-react';
 import BackendStatus from './BackendStatus';
 import { useAuth } from '@/lib/authContext';
 
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: '/',          label: 'Cargar CSV',   icon: Upload,         desc: 'Dataset del sistema' },
   { href: '/auditoria', label: 'Auditoría HU', icon: ClipboardCheck, desc: 'Escanear y comparar' },
   { href: '/dashboard', label: 'Dashboard',    icon: BarChart3,      desc: 'Métricas y reportes' },
+  { href: '/plan',      label: 'Plan',         icon: Target,         desc: 'Plan vs real del día' },
 ];
 
 const ADMIN_ITEMS = [

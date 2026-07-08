@@ -151,3 +151,39 @@ export async function checkBackendHealth(): Promise<boolean> {
     return false;
   }
 }
+
+// ── Planes de auditoría ───────────────────────────────────────────────────────
+
+export interface PlanItem {
+  subca: string;
+  targetHus: number;
+  assignedAuditor: string;
+}
+
+export interface AuditPlan {
+  id?: number;
+  date: string;
+  shift: string;
+  items: PlanItem[];
+  createdBy?: number;
+  createdAt?: string;
+}
+
+export async function fetchPlans(date?: string, shift?: string): Promise<AuditPlan[]> {
+  const params = new URLSearchParams();
+  if (date)  params.set('date',  date);
+  if (shift) params.set('shift', shift);
+  const qs = params.toString();
+  return request<AuditPlan[]>(`/api/plans${qs ? `?${qs}` : ''}`);
+}
+
+export async function savePlan(plan: Omit<AuditPlan, 'id' | 'createdBy' | 'createdAt'>): Promise<AuditPlan> {
+  return request<AuditPlan>('/api/plans', {
+    method: 'POST',
+    body: JSON.stringify(plan),
+  });
+}
+
+export async function deletePlan(id: number): Promise<void> {
+  await request<null>(`/api/plans/${id}`, { method: 'DELETE' });
+}
