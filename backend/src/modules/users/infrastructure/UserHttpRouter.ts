@@ -79,5 +79,41 @@ export function createUserRouter(repo: UserRepository): Router {
     }
   });
 
+  // ── PATCH /api/auth/users/:id/role — solo el usuario "admin" ─────────────
+  router.patch('/users/:id/role', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Solo el usuario cuyo username es "admin" puede cambiar roles
+      const requester = await repo.findById(req.user!.userId);
+      if (!requester || requester.username !== 'admin') {
+        res.status(403).json({ success: false, error: 'Solo el administrador general puede modificar roles' });
+        return;
+      }
+
+      const id   = parseInt(req.params.id, 10);
+      const { role } = req.body;
+
+      if (!['admin', 'auditor'].includes(role)) {
+        res.status(400).json({ success: false, error: 'Rol inválido. Valores permitidos: admin, auditor' });
+        return;
+      }
+
+      // No permitir cambiar el propio rol
+      if (id === req.user!.userId) {
+        res.status(400).json({ success: false, error: 'No podés modificar tu propio rol' });
+        return;
+      }
+
+      const updated = await repo.updateRole(id, role);
+      if (!updated) {
+        res.status(404).json({ success: false, error: 'Usuario no encontrado' });
+        return;
+      }
+
+      res.json({ success: true, message: `Rol actualizado a ${role}` });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   return router;
 }

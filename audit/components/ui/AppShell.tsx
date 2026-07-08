@@ -15,6 +15,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Normalizamos para comparar solo el segmento final.
   const cleanPath   = pathname.replace(/^\/Auditoria/, '') || '/';
   const isLoginPage = cleanPath === '/login';
+  const isAdminPage = cleanPath.startsWith('/usuarios') || cleanPath.startsWith('/rendimiento');
 
   useEffect(() => {
     if (loading) return;
@@ -28,8 +29,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (user && isLoginPage && !redirected.current) {
       redirected.current = true;
       router.replace('/');
+      return;
     }
-  }, [user, loading, isLoginPage, router]);
+
+    // Redirigir auditores que intenten acceder a páginas de admin
+    if (user && user.role !== 'admin' && isAdminPage && !redirected.current) {
+      redirected.current = true;
+      router.replace('/');
+    }
+  }, [user, loading, isLoginPage, isAdminPage, router]);
 
   // Resetear el flag cuando cambia el pathname
   useEffect(() => {

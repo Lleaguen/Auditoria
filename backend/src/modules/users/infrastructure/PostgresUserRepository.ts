@@ -79,4 +79,12 @@ export class PostgresUserRepository implements UserRepository {
     );
     return (rowCount ?? 0) > 0;
   }
+
+  async updateRole(id: number, role: string): Promise<boolean> {
+    const { rowCount } = await this.pool.query(
+      'UPDATE users SET role = $1 WHERE id = $2',
+      [role, id]
+    );
+    return (rowCount ?? 0) > 0;
+  }
 }

@@ -41,7 +41,7 @@ async function bootstrap() {
   app.use('/api/auth', createUserRouter(userRepo));
 
   // Audits — requiere token válido
-  app.use('/api/audits', requireAuth, createAuditRouter(auditRepo));
+  app.use('/api/audits', requireAuth, createAuditRouter(auditRepo, userRepo));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { fetchUsers, createUser, deleteUser } from '@/lib/api';
+import { fetchUsers, createUser, deleteUser, updateUserRole } from '@/lib/api';
 import type { AuthUser, UserRole } from '@/lib/auth';
+import { useAuth } from '@/lib/authContext';
 import {
   UserPlus, Trash2, RefreshCw, Shield, User,
-  X, Eye, EyeOff, Check, AlertCircle,
+  X, Eye, EyeOff, Check, AlertCircle, ChevronDown,
 } from 'lucide-react';
 
 const ROLE_STYLES: Record<UserRole, string> = {
@@ -18,6 +19,8 @@ export default function UsersPanel() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const { user: currentUser }   = useAuth();
+  const isSuperAdmin            = currentUser?.username === 'admin';
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -41,6 +44,16 @@ export default function UsersPanel() {
       setUsers((prev) => prev.filter((u) => u.id !== user.id));
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error al eliminar');
+    }
+  };
+
+  const handleRoleChange = async (user: AuthUser, newRole: UserRole) => {
+    if (user.role === newRole) return;
+    try {
+      await updateUserRole(user.id, newRole);
+      setUsers((prev) => prev.map((u) => u.id === user.id ? { ...u, role: newRole } : u));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al cambiar rol');
     }
   };
 
@@ -118,10 +131,24 @@ export default function UsersPanel() {
                   </td>
                   <td className="px-4 py-3 font-mono text-zinc-600 text-sm">{u.username}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${ROLE_STYLES[u.role]}`}>
-                      {u.role === 'admin' ? <Shield size={10} /> : <User size={10} />}
-                      {u.role}
-                    </span>
+                    {isSuperAdmin && u.username !== 'admin' ? (
+                      <div className="relative inline-flex items-center">
+                        <select
+                          value={u.role}
+                          onChange={(e) => handleRoleChange(u, e.target.value as UserRole)}
+                          className={`appearance-none pl-2.5 pr-7 py-1 rounded-lg text-xs font-semibold border cursor-pointer ${ROLE_STYLES[u.role]}`}
+                        >
+                          <option value="auditor">auditor</option>
+                          <option value="admin">admin</option>
+                        </select>
+                        <ChevronDown size={10} className="absolute right-2 pointer-events-none opacity-60" />
+                      </div>
+                    ) : (
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${ROLE_STYLES[u.role]}`}>
+                        {u.role === 'admin' ? <Shield size={10} /> : <User size={10} />}
+                        {u.role}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center gap-1 text-xs font-medium ${u.active ? 'text-emerald-600' : 'text-zinc-400'}`}>

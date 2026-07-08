@@ -22,6 +22,7 @@ interface AuditRow {
   crossed_hus: string[];
   system_shipments: string[];
   scanned_shipments: string[];
+  created_by: number | null;
   created_at: Date;
 }
 
@@ -66,6 +67,7 @@ export class PostgresAuditRepository implements AuditRepository {
       systemShipments:  Array.isArray(row.system_shipments)  ? row.system_shipments  : [],
       scannedShipments: Array.isArray(row.scanned_shipments) ? row.scanned_shipments : [],
       results,
+      createdBy: row.created_by ?? undefined,
       createdAt: row.created_at instanceof Date
         ? row.created_at.toISOString()
         : String(row.created_at),
@@ -123,8 +125,8 @@ export class PostgresAuditRepository implements AuditRepository {
         `INSERT INTO audits (
           hu_id, date, shift, subca, observations,
           total_system, total_scanned, total_ok, total_missing, total_surplus, total_crossed, total_unmanifested,
-          assembly_users, crossed_hus, system_shipments, scanned_shipments
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+          assembly_users, crossed_hus, system_shipments, scanned_shipments, created_by
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
         ON CONFLICT (hu_id, date) DO UPDATE SET
           shift              = EXCLUDED.shift,
           subca              = EXCLUDED.subca,
@@ -158,6 +160,7 @@ export class PostgresAuditRepository implements AuditRepository {
           JSON.stringify(audit.crossedHus),
           JSON.stringify(audit.systemShipments),
           JSON.stringify(audit.scannedShipments),
+          audit.createdBy ?? null,
         ]
       );
 

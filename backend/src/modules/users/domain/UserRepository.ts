@@ -7,4 +7,5 @@ export interface UserRepository {
   save(user: Omit<User, 'id' | 'createdAt'> & { passwordHash: string }): Promise<User>;
   delete(id: number): Promise<boolean>;
   setActive(id: number, active: boolean): Promise<boolean>;
+  updateRole(id: number, role: string): Promise<boolean>;
 }

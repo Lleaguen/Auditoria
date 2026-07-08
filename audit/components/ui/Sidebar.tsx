@@ -14,7 +14,8 @@ const NAV_ITEMS = [
 ];
 
 const ADMIN_ITEMS = [
-  { href: '/usuarios', label: 'Usuarios', icon: Users, desc: 'Gestión de accesos' },
+  { href: '/usuarios',    label: 'Usuarios',     icon: Users,    desc: 'Gestión de accesos' },
+  { href: '/rendimiento', label: 'Rendimiento',  icon: BarChart3, desc: 'Desempeño de auditores' },
 ];
 
 export default function Sidebar() {

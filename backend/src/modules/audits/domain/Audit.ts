@@ -36,6 +36,7 @@ export interface Audit {
   totalUnmanifested: number;
   assemblyUsers: string[];
   crossedHus: string[];
+  createdBy?: number;
   createdAt?: string;
 }
 

@@ -81,6 +81,36 @@ export async function deleteUser(id: number): Promise<void> {
   await request<null>(`/api/auth/users/${id}`, { method: 'DELETE' });
 }
 
+export async function updateUserRole(id: number, role: string): Promise<void> {
+  await request<null>(`/api/auth/users/${id}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+}
+
+export interface AuditorStat {
+  userId: number;
+  nombre: string;
+  username: string;
+  role: string;
+  husAuditados: number;
+  totalShipments: number;
+  totalOk: number;
+  totalMissing: number;
+  totalSurplus: number;
+  totalCrossed: number;
+  totalUnmanifested: number;
+  errorRate: number;
+}
+
+export async function fetchAuditorStats(fromDate?: string, toDate?: string): Promise<AuditorStat[]> {
+  const params = new URLSearchParams();
+  if (fromDate) params.set('fromDate', fromDate);
+  if (toDate)   params.set('toDate',   toDate);
+  const qs = params.toString();
+  return request<AuditorStat[]>(`/api/audits/auditor-stats${qs ? `?${qs}` : ''}`);
+}
+
 // ── Auditorías ───────────────────────────────────────────────────────────────
 
 export interface AuditFilters {
