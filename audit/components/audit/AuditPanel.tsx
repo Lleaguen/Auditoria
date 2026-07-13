@@ -38,7 +38,7 @@ export default function AuditPanel() {
   const [step, setStep]                 = useState<Step>(1);
   const [huId, setHuId]                 = useState('');
   const [scannedIds, setScannedIds]     = useState<string[]>([]);
-  const [date, setDate]                 = useState(() => new Date().toLocaleDateString('es-AR'));
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [shift, setShift]               = useState<Shift>('TT');
   const [observations, setObservations] = useState('');
   const [audit, setAudit]               = useState<AuditResult | null>(null);
@@ -115,7 +115,7 @@ export default function AuditPanel() {
                 <CalendarDays size={12} /> Fecha
               </label>
               <input
-                type="text"
+                type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full border border-zinc-200 rounded-xl px-3 py-2.5 text-sm bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:bg-white"
