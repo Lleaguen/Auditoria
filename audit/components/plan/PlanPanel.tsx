@@ -46,7 +46,6 @@ export default function PlanPanel() {
     setLoading(true);
     setError(null);
     try {
-      // Si shift está vacío, no lo mandamos como filtro para traer todos
       const filters: { date: string; shift?: string } = { date };
       if (shift) filters.shift = shift;
 
@@ -54,8 +53,13 @@ export default function PlanPanel() {
         fetchPlans(date, shift || undefined),
         fetchAudits(filters),
       ]);
-      // Buscar plan que coincida con date y shift ('' si no hay turno seleccionado)
+
+      console.log('[Plan] Auditorías cargadas:', auditData.length, auditData.map(a => ({ huId: a.huId, date: a.date, shift: a.shift, subca: a.subca })));
+      console.log('[Plan] Planes encontrados:', plans.length, plans.map(p => ({ date: p.date, shift: p.shift })));
+
       const found = plans.find((p) => p.date === date && p.shift === shift);
+      console.log('[Plan] Plan activo:', found ?? 'ninguno', '| Buscando date:', date, 'shift:', JSON.stringify(shift));
+
       setPlan(found ?? null);
       setAudits(auditData);
     } catch (err) {

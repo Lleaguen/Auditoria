@@ -156,6 +156,39 @@ export default function DashboardPanel() {
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(userRows), 'Usuarios Armado');
 
+    // Hoja 5: Detalle de shipments
+    const statusLabel: Record<string, string> = {
+      ok:            'OK',
+      missing:       'Faltante',
+      surplus:       'Sobrante',
+      crossed:       'Cruzado',
+      unmanifested:  'Sin manifestar',
+    };
+    const shipmentRows: Record<string, string | number>[] = [];
+    for (const a of filtered) {
+      for (const r of a.results) {
+        shipmentRows.push({
+          'Fecha':            a.date,
+          'Turno':            a.shift,
+          'HU':               a.huId,
+          'Sub-CA':           a.subca,
+          'Shipment ID':      r.shipmentId,
+          'Estado':           statusLabel[r.status] ?? r.status,
+          'Sub-CA shipment':  r.subca,
+          'Usuario impresión':r.labelingLastPrintUser,
+          'Fecha autorización': r.labelingAuthorizationDate,
+          'Usuarios armado':  r.outboundUserIds,
+          'Despachado':       r.dispatched ? 'Sí' : 'No',
+          'HU origen (cruzado)': r.crossedFromHu ?? '',
+        });
+      }
+    }
+    if (shipmentRows.length > 0) {
+      const wsShip = XLSX.utils.json_to_sheet(shipmentRows);
+      wsShip['!cols'] = Array(12).fill({ wch: 22 });
+      XLSX.utils.book_append_sheet(wb, wsShip, 'Detalle Shipments');
+    }
+
     const fecha = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, `dashboard_auditoria_${fecha}.xlsx`);
   };
