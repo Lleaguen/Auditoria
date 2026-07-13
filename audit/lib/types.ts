@@ -101,6 +101,8 @@ export interface AuditResult {
   totalUnmanifested: number;
   assemblyUsers: string[];
   crossedHus: string[];
+  createdBy?: number;
+  createdByName?: string; // resuelto en el store si está disponible
 }
 
 // ── Datos para el dashboard ──────────────────────────────────────────────────

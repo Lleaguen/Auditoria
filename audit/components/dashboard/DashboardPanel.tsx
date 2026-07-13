@@ -166,26 +166,35 @@ export default function DashboardPanel() {
     };
     const shipmentRows: Record<string, string | number>[] = [];
     for (const a of filtered) {
-      for (const r of a.results) {
+      a.results.forEach((r, idx) => {
+        const isFirst = idx === 0;
         shipmentRows.push({
-          'Fecha':            a.date,
-          'Turno':            a.shift,
-          'HU':               a.huId,
-          'Sub-CA':           a.subca,
-          'Shipment ID':      r.shipmentId,
-          'Estado':           statusLabel[r.status] ?? r.status,
-          'Sub-CA shipment':  r.subca,
-          'Usuario impresión':r.labelingLastPrintUser,
+          'Fecha':              a.date,
+          'Turno':              a.shift,
+          'HU':                 a.huId,
+          'Sub-CA':             a.subca,
+          // Columnas resumen solo en la primera fila del HU
+          'QPiezas':            isFirst ? a.totalSystem      : '',
+          'QFaltantes':         isFirst ? a.totalMissing     : '',
+          'QSobrantes':         isFirst ? a.totalSurplus     : '',
+          'QCruzados':          isFirst ? a.totalCrossed     : '',
+          'QSinManifestados':   isFirst ? a.totalUnmanifested: '',
+          'Auditor':            isFirst ? (a.createdByName ?? a.assemblyUsers.join(', ') ?? '') : '',
+          // Detalle del shipment
+          'Shipment ID':        r.shipmentId,
+          'Estado':             statusLabel[r.status] ?? r.status,
+          'Sub-CA shipment':    r.subca,
+          'Usuario impresión':  r.labelingLastPrintUser,
           'Fecha autorización': r.labelingAuthorizationDate,
-          'Usuarios armado':  r.outboundUserIds,
-          'Despachado':       r.dispatched ? 'Sí' : 'No',
+          'Usuarios armado':    r.outboundUserIds,
+          'Despachado':         r.dispatched ? 'Sí' : 'No',
           'HU origen (cruzado)': r.crossedFromHu ?? '',
         });
-      }
+      });
     }
     if (shipmentRows.length > 0) {
       const wsShip = XLSX.utils.json_to_sheet(shipmentRows);
-      wsShip['!cols'] = Array(12).fill({ wch: 22 });
+      wsShip['!cols'] = Array(18).fill({ wch: 22 });
       XLSX.utils.book_append_sheet(wb, wsShip, 'Detalle Shipments');
     }
 
