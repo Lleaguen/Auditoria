@@ -1,0 +1,46 @@
+# Caddyfile — Proxy reverso para audit-backend
+# Máquina: 192.168.67.121
+# Backend Express corre en localhost:3001
+
+:80 {
+    # Redirigir todo el tráfico HTTP a HTTPS
+    redir https://{host}{uri} permanent
+}
+
+:443 {
+    # Certificado self-signed para uso interno (sin dominio público)
+    tls internal
+
+    # Log de accesos (ruta Windows)
+    log {
+        output file "C:/caddy/logs/access.log"
+        format json
+    }
+
+    # CORS — reemplazá con la URL real de tu GitHub Pages
+    header {
+        Access-Control-Allow-Origin "https://lleaguen.github.io"
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+        Access-Control-Allow-Headers "Authorization, Content-Type, Accept"
+        Access-Control-Max-Age "3600"
+        # Ocultar que hay un proxy detrás
+        -Server
+    }
+
+    # Responder OPTIONS directamente (preflight CORS)
+    @options method OPTIONS
+    respond @options 204
+
+    # Proxy al backend Express
+    reverse_proxy localhost:3001 {
+        # Pasar IP real al backend (útil para logs)
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+
+        # Health check del backend
+        health_uri /health
+        health_interval 30s
+        health_timeout 5s
+    }
+}
