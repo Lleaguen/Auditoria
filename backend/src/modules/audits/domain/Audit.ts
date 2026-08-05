@@ -37,6 +37,7 @@ export interface Audit {
   assemblyUsers: string[];
   crossedHus: string[];
   createdBy?: number;
+  createdByName?: string;  // nombre completo del auditor (resuelto via JOIN)
   createdAt?: string;
 }
 

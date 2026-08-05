@@ -24,6 +24,9 @@ interface AuditRow {
   scanned_shipments: string[];
   created_by: number | null;
   created_at: Date;
+  // Resuelto via JOIN con users
+  created_by_nombre:   string | null;
+  created_by_apellido: string | null;
 }
 
 interface ShipmentResultRow {
@@ -48,6 +51,10 @@ export class PostgresAuditRepository implements AuditRepository {
   // ── Mappers ──────────────────────────────────────────────────────────────
 
   private rowToAudit(row: AuditRow, results: ScannedShipmentResult[]): Audit {
+    const createdByName = row.created_by_nombre && row.created_by_apellido
+      ? `${row.created_by_nombre} ${row.created_by_apellido}`.trim()
+      : undefined;
+
     return {
       id:                row.id,
       huId:              row.hu_id,
@@ -67,8 +74,9 @@ export class PostgresAuditRepository implements AuditRepository {
       systemShipments:  Array.isArray(row.system_shipments)  ? row.system_shipments  : [],
       scannedShipments: Array.isArray(row.scanned_shipments) ? row.scanned_shipments : [],
       results,
-      createdBy: row.created_by ?? undefined,
-      createdAt: row.created_at instanceof Date
+      createdBy:     row.created_by ?? undefined,
+      createdByName: createdByName,
+      createdAt:     row.created_at instanceof Date
         ? row.created_at.toISOString()
         : String(row.created_at),
     };
@@ -234,7 +242,13 @@ export class PostgresAuditRepository implements AuditRepository {
 
       const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
       const { rows } = await client.query<AuditRow>(
-        `SELECT * FROM audits ${where} ORDER BY created_at DESC`,
+        `SELECT a.*,
+                u.nombre   AS created_by_nombre,
+                u.apellido AS created_by_apellido
+         FROM audits a
+         LEFT JOIN users u ON u.id = a.created_by
+         ${where}
+         ORDER BY a.created_at DESC`,
         params
       );
 
@@ -255,7 +269,12 @@ export class PostgresAuditRepository implements AuditRepository {
     const client = await this.pool.connect();
     try {
       const { rows } = await client.query<AuditRow>(
-        'SELECT * FROM audits WHERE id = $1',
+        `SELECT a.*,
+                u.nombre   AS created_by_nombre,
+                u.apellido AS created_by_apellido
+         FROM audits a
+         LEFT JOIN users u ON u.id = a.created_by
+         WHERE a.id = $1`,
         [id]
       );
       if (rows.length === 0) return null;
