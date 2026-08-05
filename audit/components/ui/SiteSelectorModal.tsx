@@ -4,12 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { Building2 } from 'lucide-react';
 import { SITES, SiteKey, getStoredSite, saveSite } from '@/lib/siteConfig';
 
-/**
- * Modal que aparece al iniciar la app si el usuario no eligió planta todavía.
- * La elección se guarda en localStorage y el usuario puede cambiarla desde
- * el Sidebar (componente SiteSelector).
- */
-export default function SiteSelectorModal() {
+interface Props {
+  /** Callback opcional — si se pasa, se llama al elegir en vez de hacer reload */
+  onSelect?: () => void;
+}
+
+export default function SiteSelectorModal({ onSelect }: Props) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -18,15 +18,21 @@ export default function SiteSelectorModal() {
 
   const handleSelect = (key: SiteKey) => {
     saveSite(key);
-    setOpen(false);
-    // Recargamos para que api.ts tome la URL correcta
-    window.location.reload();
+    if (onSelect) {
+      // Llamado desde AppShell antes del login — no recargamos, solo actualizamos estado
+      setOpen(false);
+      onSelect();
+    } else {
+      // Llamado desde el sidebar (cambio de planta en medio de sesión) → recargar
+      setOpen(false);
+      window.location.reload();
+    }
   };
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center min-h-screen bg-zinc-950">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-8">
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-8">

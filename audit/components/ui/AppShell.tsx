@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
 import Sidebar from './Sidebar';
 import SiteSelectorModal from './SiteSelectorModal';
+import { getStoredSite } from '@/lib/siteConfig';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -12,8 +13,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router    = useRouter();
   const redirected = useRef(false);
 
-  // usePathname() puede devolver /login o /Auditoria/login según el entorno.
-  // Normalizamos para comparar solo el segmento final.
+  // Verificar si ya eligió planta (solo en cliente)
+  const [siteReady, setSiteReady] = useState(false);
+  useEffect(() => {
+    setSiteReady(!!getStoredSite());
+  }, []);
+
   const cleanPath   = pathname.replace(/^\/Auditoria/, '') || '/';
   const isLoginPage = cleanPath === '/login';
   const isAdminPage = cleanPath.startsWith('/usuarios') || cleanPath.startsWith('/rendimiento');
@@ -33,17 +38,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Redirigir auditores que intenten acceder a páginas de admin
     if (user && user.role !== 'admin' && isAdminPage && !redirected.current) {
       redirected.current = true;
       router.replace('/');
     }
   }, [user, loading, isLoginPage, isAdminPage, router]);
 
-  // Resetear el flag cuando cambia el pathname
   useEffect(() => {
     redirected.current = false;
   }, [pathname]);
+
+  // Si no eligió planta todavía → mostrar solo el modal, nada más
+  if (!siteReady) {
+    return (
+      <SiteSelectorModal onSelect={() => setSiteReady(true)} />
+    );
+  }
 
   // Mientras resuelve la sesión
   if (loading) {
@@ -64,7 +74,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <SiteSelectorModal />
       <Sidebar />
       <main className="flex-1 min-h-screen overflow-y-auto">
         <div className="w-full max-w-5xl mx-auto px-8 py-10">
