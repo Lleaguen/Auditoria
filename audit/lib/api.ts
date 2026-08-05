@@ -162,6 +162,7 @@ export async function checkBackendHealth(): Promise<boolean> {
 export interface PlanItem {
   subca: string;
   targetHus: number;
+  targetPiezas: number;
   assignedAuditor: string;
 }
 

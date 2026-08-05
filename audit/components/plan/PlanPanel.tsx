@@ -40,9 +40,7 @@ export default function PlanPanel() {
   const [error, setError]     = useState<string | null>(null);
 
   const [editItems, setEditItems] = useState<Omit<PlanItem, 'assignedAuditor'>[]>([]);
-  const [editing, setEditing]     = useState(false);
-
-  const load = useCallback(async () => {
+  const [editing, setEditing]     = useState(false);  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -73,21 +71,21 @@ export default function PlanPanel() {
 
   const startEdit = () => {
     const items = plan
-      ? plan.items.map(({ subca, targetHus }) => ({ subca, targetHus }))
-      : [{ subca: '', targetHus: 1 }];
+      ? plan.items.map(({ subca, targetHus, targetPiezas }) => ({ subca, targetHus, targetPiezas: targetPiezas ?? 0 }))
+      : [{ subca: '', targetHus: 1, targetPiezas: 0 }];
     setEditItems(items);
     setEditing(true);
   };
 
-  const addRow    = () => setEditItems((p) => [...p, { subca: '', targetHus: 1 }]);
+  const addRow    = () => setEditItems((p) => [...p, { subca: '', targetHus: 1, targetPiezas: 0 }]);
   const removeRow = (i: number) => setEditItems((p) => p.filter((_, idx) => idx !== i));
-  const updateRow = (i: number, field: 'subca' | 'targetHus', value: string | number) =>
+  const updateRow = (i: number, field: 'subca' | 'targetHus' | 'targetPiezas', value: string | number) =>
     setEditItems((p) => p.map((item, idx) => idx === i ? { ...item, [field]: value } : item));
 
   const handleSave = async () => {
     const validItems = editItems
       .filter((it) => it.subca.trim() !== '')
-      .map((it) => ({ ...it, assignedAuditor: '' })); // assignedAuditor se elimina del formulario
+      .map((it) => ({ ...it, assignedAuditor: '' }));
     if (validItems.length === 0) {
       setError('Agregá al menos un sub-CA con nombre');
       return;
@@ -157,8 +155,11 @@ export default function PlanPanel() {
       return {
         subca:             item.subca,
         targetHus:         item.targetHus,
+        targetPiezas:      item.targetPiezas ?? 0,
         realHus,
+        realPiezas:        real?.totalSystem ?? 0,
         cumplimiento:      pct(realHus, item.targetHus),
+        cumplimientoPiezas: pct(real?.totalSystem ?? 0, item.targetPiezas ?? 0),
         totalSystem:       real?.totalSystem ?? 0,
         totalOk:           real?.totalOk ?? 0,
         totalMissing:      real?.totalMissing ?? 0,
@@ -188,26 +189,30 @@ export default function PlanPanel() {
   }, [audits]);
 
   const totals = useMemo(() => ({
-    planHus: analysis.reduce((s, r) => s + r.targetHus, 0),
-    realHus: analysis.reduce((s, r) => s + r.realHus, 0),
+    planHus:    analysis.reduce((s, r) => s + r.targetHus, 0),
+    realHus:    analysis.reduce((s, r) => s + r.realHus, 0),
+    planPiezas: analysis.reduce((s, r) => s + r.targetPiezas, 0),
+    realPiezas: analysis.reduce((s, r) => s + r.realPiezas, 0),
   }), [analysis]);
 
   const exportExcel = () => {
     const rows = analysis.map((r) => ({
-      'Sub-CA':       r.subca,
-      'Plan HUs':     r.targetHus,
-      'Real HUs':     r.realHus,
-      'Cumplimiento': `${r.cumplimiento}%`,
-      'Shipments':    r.totalSystem,
-      'OK':           r.totalOk,
-      'Faltantes':    r.totalMissing,
-      'Sobrantes':    r.totalSurplus,
-      'Cruzados':     r.totalCrossed,
-      'Tasa error':   `${r.errorRate}%`,
-      'Auditores':    [...(auditorsBySubca.get(r.subca) ?? [])].join(', '),
+      'Sub-CA':              r.subca,
+      'Plan HUs':            r.targetHus,
+      'Real HUs':            r.realHus,
+      'Cumpl. HUs':          `${r.cumplimiento}%`,
+      'Plan Piezas':         r.targetPiezas,
+      'Real Piezas':         r.realPiezas,
+      'Cumpl. Piezas':       r.targetPiezas > 0 ? `${r.cumplimientoPiezas}%` : '—',
+      'OK':                  r.totalOk,
+      'Faltantes':           r.totalMissing,
+      'Sobrantes':           r.totalSurplus,
+      'Cruzados':            r.totalCrossed,
+      'Tasa error':          `${r.errorRate}%`,
+      'Auditores':           [...(auditorsBySubca.get(r.subca) ?? [])].join(', '),
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = Array(11).fill({ wch: 16 });
+    ws['!cols'] = Array(13).fill({ wch: 16 });
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Plan');
     XLSX.writeFile(wb, `plan_${date}${shift ? '_' + shift : ''}.xlsx`);
@@ -272,6 +277,7 @@ export default function PlanPanel() {
                 <tr className="bg-zinc-50 border-b border-zinc-200">
                   <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500 uppercase">Sub-CA</th>
                   <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500 uppercase">HUs objetivo</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500 uppercase">Piezas objetivo</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
@@ -283,6 +289,9 @@ export default function PlanPanel() {
                     </td>
                     <td className="px-3 py-2">
                       <input type="number" min={1} value={item.targetHus} onChange={(e) => updateRow(i, 'targetHus', parseInt(e.target.value) || 1)} className="input-base w-24 text-sm" />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input type="number" min={0} value={item.targetPiezas ?? 0} onChange={(e) => updateRow(i, 'targetPiezas', parseInt(e.target.value) || 0)} className="input-base w-28 text-sm" />
                     </td>
                     <td className="px-3 py-2">
                       <button onClick={() => removeRow(i)} className="text-zinc-300 hover:text-red-400 p-1 rounded">
@@ -324,12 +333,12 @@ export default function PlanPanel() {
         <div className="space-y-6">
 
           {/* KPIs */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: 'HUs planificados', value: totals.planHus,  color: 'text-indigo-600',  icon: Target },
-              { label: 'HUs auditados',    value: totals.realHus,  color: 'text-emerald-600', icon: ClipboardList },
-              { label: 'Cumplimiento',     value: `${pct(totals.realHus, totals.planHus)}%`,
-                color: pct(totals.realHus, totals.planHus) >= 80 ? 'text-emerald-600' : 'text-red-600', icon: TrendingUp },
+              { label: 'HUs planificados',   value: totals.planHus,    color: 'text-indigo-600',  icon: Target },
+              { label: 'HUs auditados',       value: totals.realHus,    color: 'text-emerald-600', icon: ClipboardList },
+              { label: 'Piezas planificadas', value: totals.planPiezas, color: 'text-indigo-400',  icon: Target },
+              { label: 'Piezas auditadas',    value: totals.realPiezas, color: 'text-emerald-400', icon: ClipboardList },
             ].map(({ label, value, color, icon: Icon }) => (
               <div key={label} className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-sm flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center shrink-0">
@@ -341,6 +350,31 @@ export default function PlanPanel() {
                 </div>
               </div>
             ))}
+          </div>
+          <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-sm flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center shrink-0">
+              <TrendingUp size={18} className={pct(totals.realHus, totals.planHus) >= 80 ? 'text-emerald-600' : 'text-red-600'} />
+            </div>
+            <div>
+              <p className={`text-2xl font-bold ${pct(totals.realHus, totals.planHus) >= 80 ? 'text-emerald-600' : 'text-red-600'}`}>
+                {pct(totals.realHus, totals.planHus)}%
+              </p>
+              <p className="text-xs text-zinc-400 mt-0.5">Cumplimiento HUs</p>
+            </div>
+            {totals.planPiezas > 0 && (
+              <>
+                <div className="w-px h-10 bg-zinc-100 mx-2" />
+                <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center shrink-0">
+                  <TrendingUp size={18} className={pct(totals.realPiezas, totals.planPiezas) >= 80 ? 'text-emerald-600' : 'text-red-600'} />
+                </div>
+                <div>
+                  <p className={`text-2xl font-bold ${pct(totals.realPiezas, totals.planPiezas) >= 80 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {pct(totals.realPiezas, totals.planPiezas)}%
+                  </p>
+                  <p className="text-xs text-zinc-400 mt-0.5">Cumplimiento Piezas</p>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Gráfico Plan vs Real */}
@@ -393,10 +427,12 @@ export default function PlanPanel() {
                 <tr className="bg-zinc-900 text-zinc-300">
                   <th className="px-4 py-3 text-left font-semibold">Sub-CA</th>
                   <th className="px-4 py-3 text-left font-semibold">Usuarios armado</th>
-                  <th className="px-4 py-3 text-center font-semibold">Plan</th>
-                  <th className="px-4 py-3 text-center font-semibold">Real</th>
-                  <th className="px-4 py-3 text-center font-semibold">Cumplimiento</th>
-                  <th className="px-4 py-3 text-center font-semibold">Shipments</th>
+                  <th className="px-4 py-3 text-center font-semibold">Plan HUs</th>
+                  <th className="px-4 py-3 text-center font-semibold">Real HUs</th>
+                  <th className="px-4 py-3 text-center font-semibold">Cumpl. HUs</th>
+                  <th className="px-4 py-3 text-center font-semibold">Plan Piezas</th>
+                  <th className="px-4 py-3 text-center font-semibold">Real Piezas</th>
+                  <th className="px-4 py-3 text-center font-semibold">Cumpl. Piezas</th>
                   <th className="px-4 py-3 text-center font-semibold">OK</th>
                   <th className="px-4 py-3 text-center font-semibold">Faltantes</th>
                   <th className="px-4 py-3 text-center font-semibold">Cruzados</th>
@@ -408,11 +444,14 @@ export default function PlanPanel() {
                   const cum = row.cumplimiento;
                   const cumColor = cum >= 100 ? 'text-emerald-600' : cum >= 70 ? 'text-yellow-600' : 'text-red-600';
                   const cumBg   = cum >= 100 ? 'bg-emerald-50 border-emerald-200' : cum >= 70 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200';
+                  const cumP = row.cumplimientoPiezas;
+                  const cumPColor = cumP >= 100 ? 'text-emerald-600' : cumP >= 70 ? 'text-yellow-600' : 'text-red-600';
+                  const cumPBg   = cumP >= 100 ? 'bg-emerald-50 border-emerald-200' : cumP >= 70 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200';
                   const users = [...(auditorsBySubca.get(row.subca) ?? [])];
                   return (
                     <tr key={row.subca} className="hover:bg-zinc-50">
                       <td className="px-4 py-3 font-semibold text-zinc-800">{row.subca}</td>
-                      <td className="px-4 py-3 text-zinc-500 text-xs max-w-[160px] truncate" title={users.join(', ')}>
+                      <td className="px-4 py-3 text-zinc-500 text-xs max-w-[120px] truncate" title={users.join(', ')}>
                         {users.length > 0 ? users.join(', ') : '—'}
                       </td>
                       <td className="px-4 py-3 text-center font-medium text-indigo-600">{row.targetHus}</td>
@@ -420,7 +459,14 @@ export default function PlanPanel() {
                       <td className="px-4 py-3 text-center">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${cumBg} ${cumColor}`}>{cum}%</span>
                       </td>
-                      <td className="px-4 py-3 text-center text-zinc-600">{row.totalSystem}</td>
+                      <td className="px-4 py-3 text-center font-medium text-indigo-400">{row.targetPiezas > 0 ? row.targetPiezas : '—'}</td>
+                      <td className="px-4 py-3 text-center font-medium text-emerald-500">{row.realPiezas}</td>
+                      <td className="px-4 py-3 text-center">
+                        {row.targetPiezas > 0
+                          ? <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${cumPBg} ${cumPColor}`}>{cumP}%</span>
+                          : <span className="text-zinc-300">—</span>
+                        }
+                      </td>
                       <td className="px-4 py-3 text-center text-emerald-600 font-medium">{row.totalOk}</td>
                       <td className="px-4 py-3 text-center"><span className={row.totalMissing > 0 ? 'text-red-500 font-bold' : 'text-zinc-300'}>{row.totalMissing}</span></td>
                       <td className="px-4 py-3 text-center"><span className={row.totalCrossed > 0 ? 'text-yellow-600 font-bold' : 'text-zinc-300'}>{row.totalCrossed}</span></td>
@@ -439,7 +485,16 @@ export default function PlanPanel() {
                       {pct(totals.realHus, totals.planHus)}%
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center text-zinc-600">{analysis.reduce((s, r) => s + r.totalSystem, 0)}</td>
+                  <td className="px-4 py-3 text-center text-indigo-400">{totals.planPiezas > 0 ? totals.planPiezas : '—'}</td>
+                  <td className="px-4 py-3 text-center text-emerald-500">{totals.realPiezas}</td>
+                  <td className="px-4 py-3 text-center">
+                    {totals.planPiezas > 0
+                      ? <span className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-bold border ${pct(totals.realPiezas, totals.planPiezas) >= 100 ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600'}`}>
+                          {pct(totals.realPiezas, totals.planPiezas)}%
+                        </span>
+                      : <span className="text-zinc-300">—</span>
+                    }
+                  </td>
                   <td className="px-4 py-3 text-center text-emerald-600">{analysis.reduce((s, r) => s + r.totalOk, 0)}</td>
                   <td className="px-4 py-3 text-center text-red-500">{analysis.reduce((s, r) => s + r.totalMissing, 0)}</td>
                   <td className="px-4 py-3 text-center text-yellow-600">{analysis.reduce((s, r) => s + r.totalCrossed, 0)}</td>

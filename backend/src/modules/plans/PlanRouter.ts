@@ -5,6 +5,7 @@ import { requireAuth, requireAdmin } from '../../shared/middleware/auth';
 export interface PlanItem {
   subca: string;
   targetHus: number;
+  targetPiezas: number;
   assignedAuditor: string; // username o nombre libre
 }
 
