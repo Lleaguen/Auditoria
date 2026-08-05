@@ -3,6 +3,7 @@ import express from 'express';
 import { corsMiddleware } from './shared/middleware/cors';
 import { errorHandler, notFoundHandler } from './shared/middleware/errorHandler';
 import { requireAuth } from './shared/middleware/auth';
+import { requireApiKey } from './shared/middleware/apiKey';
 import { getPool, closePool } from './shared/db/client';
 import { runMigrations } from './shared/db/schema';
 import { PostgresAuditRepository } from './modules/audits/infrastructure/PostgresAuditRepository';
@@ -28,7 +29,7 @@ async function bootstrap() {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true }));
 
-  // Health check (público)
+  // Health check (público, sin API Key)
   app.get('/health', async (_req, res) => {
     try {
       await pool.query('SELECT 1');
@@ -37,6 +38,9 @@ async function bootstrap() {
       res.status(503).json({ status: 'error', db: 'disconnected' });
     }
   });
+
+  // API Key — todas las rutas /api requieren clave de planta válida
+  app.use('/api', requireApiKey);
 
   // Auth (login público, gestión de usuarios protegida por rol)
   app.use('/api/auth', createUserRouter(userRepo));

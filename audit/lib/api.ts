@@ -1,8 +1,21 @@
 import type { AuditResult } from './types';
 import type { AuthUser, LoginResponse, UserRole } from './auth';
 import { getToken, clearSession } from './auth';
+import { getActiveApiUrl, getStoredSite } from './siteConfig';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+// BASE_URL se resuelve en cada request para respetar la planta activa
+// elegida por el usuario en runtime (guardada en localStorage).
+function getBaseUrl(): string {
+  return getActiveApiUrl();
+}
+
+// API Key de la planta activa — quemada en el bundle desde GitHub Actions.
+// Se elige según la planta que el usuario seleccionó en localStorage.
+function getApiKey(): string {
+  const site = getStoredSite();
+  if (site === 'EEV') return process.env.NEXT_PUBLIC_API_KEY_EEV ?? '';
+  return process.env.NEXT_PUBLIC_API_KEY_CIU ?? '';
+}
 
 interface ApiResponse<T> {
   success: boolean;
@@ -16,9 +29,10 @@ interface ApiResponse<T> {
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getToken();
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${getBaseUrl()}${path}`, {
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type':  'application/json',
+      'X-Api-Key':     getApiKey(),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
@@ -145,7 +159,7 @@ export async function deleteAuditById(id: number): Promise<void> {
 
 export async function checkBackendHealth(): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE_URL}/health`, { signal: AbortSignal.timeout(3000) });
+    const res = await fetch(`${getBaseUrl()}/health`, { signal: AbortSignal.timeout(3000) });
     return res.ok;
   } catch {
     return false;

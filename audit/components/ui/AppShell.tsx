@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
 import Sidebar from './Sidebar';
+import SiteSelectorModal from './SiteSelectorModal';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -63,6 +64,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
+      <SiteSelectorModal />
       <Sidebar />
       <main className="flex-1 min-h-screen overflow-y-auto">
         <div className="w-full max-w-5xl mx-auto px-8 py-10">

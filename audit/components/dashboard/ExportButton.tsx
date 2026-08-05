@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import type { DailyStats } from '@/lib/types';
+import { useAuth } from '@/lib/authContext';
 
 interface ExportButtonProps {
   data: DailyStats[];
@@ -11,13 +12,17 @@ interface ExportButtonProps {
 
 export default function ExportButton({ data }: ExportButtonProps) {
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
   const handleExport = () => {
     if (data.length === 0) return;
     setLoading(true);
 
     try {
+      const auditorName = user ? `${user.nombre} ${user.apellido}`.trim() : '';
+
       const rows = data.map((d) => ({
+        'AUDITOR':                        auditorName,
         'FECHA':                          d.date,
         'Q HU AUDITADOS':                 d.totalHusAudited,
         'Q HU CON DESVIOS':               d.husWithDeviation,
@@ -41,6 +46,7 @@ export default function ExportButton({ data }: ExportButtonProps) {
       const totalErrors       = totalMissing + totalCrossed + totalUnmanifested;
 
       rows.push({
+        'AUDITOR':                        auditorName,
         'FECHA':                          'TOTAL',
         'Q HU AUDITADOS':                 totalHus,
         'Q HU CON DESVIOS':               totalDesvios,
@@ -59,6 +65,7 @@ export default function ExportButton({ data }: ExportButtonProps) {
 
       const ws = XLSX.utils.json_to_sheet(rows);
       ws['!cols'] = [
+        { wch: 22 }, // AUDITOR
         { wch: 12 },
         { wch: 16 },
         { wch: 17 },

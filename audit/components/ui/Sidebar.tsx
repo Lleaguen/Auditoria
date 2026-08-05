@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart3, ClipboardCheck, Upload, Warehouse, Users, LogOut, Shield, User, Target } from 'lucide-react';
+import { BarChart3, ClipboardCheck, Upload, Warehouse, Users, LogOut, Shield, User, Target, Building2, RefreshCw } from 'lucide-react';
 import BackendStatus from './BackendStatus';
 import { useAuth } from '@/lib/authContext';
+import { SITES, SiteKey, getStoredSite, saveSite } from '@/lib/siteConfig';
 
 const NAV_ITEMS = [
   { href: '/',          label: 'Cargar CSV',   icon: Upload,         desc: 'Dataset del sistema' },
@@ -23,6 +24,19 @@ export default function Sidebar() {
   const pathname    = usePathname();
   const router      = useRouter();
   const { user, signOut, isAdmin } = useAuth();
+
+  const [activeSite, setActiveSite] = useState<SiteKey | null>(null);
+
+  useEffect(() => {
+    setActiveSite(getStoredSite());
+  }, []);
+
+  const handleSwitchSite = () => {
+    const next: SiteKey = activeSite === 'CIU' ? 'EEV' : 'CIU';
+    saveSite(next);
+    setActiveSite(next);
+    window.location.reload();
+  };
 
   const handleSignOut = () => {
     signOut();
@@ -64,6 +78,25 @@ export default function Sidebar() {
             <p className="text-zinc-500 text-[10px] leading-tight">Auditoría de pallets</p>
           </div>
         </div>
+
+        {/* Planta activa */}
+        {activeSite && (
+          <div className="mt-3 flex items-center justify-between bg-zinc-800/60 rounded-lg px-3 py-2">
+            <div className="flex items-center gap-2">
+              <Building2 size={12} className="text-zinc-400" />
+              <span className="text-zinc-300 text-xs font-medium">
+                {SITES.find((s) => s.key === activeSite)?.label ?? activeSite}
+              </span>
+            </div>
+            <button
+              onClick={handleSwitchSite}
+              title="Cambiar planta"
+              className="text-zinc-500 hover:text-zinc-200 p-1 rounded hover:bg-zinc-700 transition-colors"
+            >
+              <RefreshCw size={11} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Nav principal */}

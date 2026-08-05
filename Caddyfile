@@ -2,45 +2,86 @@
 # Máquina: 192.168.67.121
 # Backend Express corre en localhost:3001
 
+# ── HTTP → HTTPS ──────────────────────────────────────────────────────────────
 :80 {
-    # Redirigir todo el tráfico HTTP a HTTPS
     redir https://{host}{uri} permanent
 }
 
+# ── HTTPS principal ───────────────────────────────────────────────────────────
 :443 {
     # Certificado self-signed para uso interno (sin dominio público)
     tls internal
 
-    # Log de accesos (ruta Windows)
+    # ── Log de accesos ────────────────────────────────────────────────────────
     log {
         output file "C:/caddy/logs/access.log"
         format json
     }
 
-    # CORS — reemplazá con la URL real de tu GitHub Pages
-    header {
-        Access-Control-Allow-Origin "https://lleaguen.github.io"
-        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-        Access-Control-Allow-Headers "Authorization, Content-Type, Accept"
-        Access-Control-Max-Age "3600"
-        # Ocultar que hay un proxy detrás
-        -Server
+    # ── Whitelist de IP: solo redes internas de planta ────────────────────────
+    # Ajustá los rangos según la red de cada planta.
+    # 192.168.67.0/24 → red de CIU (Soldati)
+    # 192.168.68.0/24 → red de EEV (Echeverría) — cambiá por el rango real
+    @allowed_networks remote_ip 192.168.67.0/24 192.168.68.0/24 127.0.0.1
+    @blocked          not remote_ip 192.168.67.0/24 192.168.68.0/24 127.0.0.1
+
+    # Rechazar todo tráfico que no venga de las redes autorizadas
+    handle @blocked {
+        respond "Acceso no autorizado" 403
     }
 
-    # Responder OPTIONS directamente (preflight CORS)
+    # ── Rate limiting: máximo 30 req/s por IP ─────────────────────────────────
+    # Previene fuerza bruta al login y abuso de la API.
+    # Para instalar el módulo: caddy add-package github.com/mholt/caddy-ratelimit
+    # Si no tenés el módulo, comentá este bloque.
+    rate_limit {remote_host} 30r/s
+
+    # ── Cabeceras de seguridad ────────────────────────────────────────────────
+    header {
+        # CORS — solo acepta requests desde GitHub Pages
+        Access-Control-Allow-Origin  "https://lleaguen.github.io"
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+        Access-Control-Allow-Headers "Authorization, Content-Type, Accept, X-Api-Key"
+        Access-Control-Max-Age       "3600"
+
+        # Ocultar que hay un proxy y qué tecnología corre atrás
+        -Server
+        -X-Powered-By
+
+        # Seguridad HTTP
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "DENY"
+        Referrer-Policy           "no-referrer"
+    }
+
+    # ── Preflight CORS (OPTIONS) — responder sin tocar el backend ─────────────
     @options method OPTIONS
     respond @options 204
 
-    # Proxy al backend Express
-    reverse_proxy localhost:3001 {
-        # Pasar IP real al backend (útil para logs)
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
+    # ── Rate limit más estricto para el endpoint de login ─────────────────────
+    # Máximo 5 intentos por minuto por IP para prevenir fuerza bruta.
+    @login_path path /api/auth/login
+    handle @login_path {
+        rate_limit {remote_host} 5r/m
+        reverse_proxy localhost:3001 {
+            header_up X-Real-IP        {remote_host}
+            header_up X-Forwarded-For  {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
 
-        # Health check del backend
-        health_uri /health
-        health_interval 30s
-        health_timeout 5s
+    # ── Proxy al backend Express ──────────────────────────────────────────────
+    handle {
+        reverse_proxy localhost:3001 {
+            header_up X-Real-IP         {remote_host}
+            header_up X-Forwarded-For   {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+
+            # Health check automático del backend
+            health_uri      /health
+            health_interval 30s
+            health_timeout  5s
+        }
     }
 }

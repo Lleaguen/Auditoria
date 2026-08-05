@@ -25,12 +25,15 @@ import type { AuditResult } from '@/lib/types';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
+import { useAuth } from '@/lib/authContext';
 
 const PIE_COLORS = ['#ef4444', '#eab308', '#f97316', '#6366f1', '#10b981', '#8b5cf6', '#06b6d4'];
 
 export default function DashboardPanel() {
   const { state, deleteAudit } = useAppStore();
   const audits = state.audits;
+  const { user } = useAuth();
+  const auditorName = user ? `${user.nombre} ${user.apellido}`.trim() : '';
 
   // ── Filtros ───────────────────────────────────────────────────────────────
   const [filterDate,  setFilterDate]  = useState('');
@@ -104,6 +107,7 @@ export default function DashboardPanel() {
 
     // Hoja 1: Detalle diario
     const dailyRows = dailyStats.map((d) => ({
+      'Auditor':            auditorName,
       'Fecha':              d.date,
       'HUs auditados':      d.totalHusAudited,
       'HUs con desvío':     d.husWithDeviation,
@@ -130,6 +134,7 @@ export default function DashboardPanel() {
 
     // Hoja 3: Historial completo
     const histRows = filtered.map((a) => ({
+      'Auditor':       a.createdByName ?? auditorName,
       'Fecha':         a.date,
       'Turno':         a.shift,
       'HU':            a.huId,
@@ -179,7 +184,8 @@ export default function DashboardPanel() {
           'QSobrantes':         isFirst ? a.totalSurplus     : '',
           'QCruzados':          isFirst ? a.totalCrossed     : '',
           'QSinManifestados':   isFirst ? a.totalUnmanifested: '',
-          'Auditor':            isFirst ? (a.createdByName ?? a.assemblyUsers.join(', ') ?? '') : '',
+          // Auditor: usamos el nombre registrado en la auditoría, si no el del usuario logueado
+          'Auditor':            isFirst ? (a.createdByName ?? auditorName) : '',
           // Detalle del shipment
           'Shipment ID':        r.shipmentId,
           'Estado':             statusLabel[r.status] ?? r.status,
