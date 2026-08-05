@@ -38,16 +38,10 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # URLs de cada planta — configurar en GitHub → Settings → Variables → Actions
-          # NEXT_PUBLIC_API_URL_CIU → https://IP_de_soldati  (ej: https://192.168.67.121)
-          # NEXT_PUBLIC_API_URL_EEV → https://IP_de_echeverria
-          NEXT_PUBLIC_API_URL_CIU: ${{ vars.API_URL_CIU }}
-          NEXT_PUBLIC_API_URL_EEV: ${{ vars.API_URL_EEV }}
-
-          # API Keys por planta — configurar en GitHub → Settings → Secrets → Actions
-          # Deben coincidir exactamente con API_KEY_CIU / API_KEY_EEV del .env del backend
-          NEXT_PUBLIC_API_KEY_CIU: ${{ secrets.API_KEY_CIU }}
-          NEXT_PUBLIC_API_KEY_EEV: ${{ secrets.API_KEY_EEV }}
+          # URLs de cada planta — configurar en GitHub → Settings → Secrets → Actions
+          # Usar Secrets (no Variables) para que la IP no quede visible en la config del repo
+          NEXT_PUBLIC_API_URL_CIU: ${{ secrets.API_URL_CIU }}
+          NEXT_PUBLIC_API_URL_EEV: ${{ secrets.API_URL_EEV }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
