@@ -14,7 +14,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const redirected = useRef(false);
 
   // Verificar si ya eligió planta (solo en cliente)
-  const [siteReady, setSiteReady] = useState(false);
+  // null = todavía no sabemos (pre-hidratación), true/false = ya sabemos
+  const [siteReady, setSiteReady] = useState<boolean | null>(null);
   useEffect(() => {
     setSiteReady(!!getStoredSite());
   }, []);
@@ -47,6 +48,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     redirected.current = false;
   }, [pathname]);
+
+  // Todavía no sabemos si eligió planta (esperando hidratación del cliente)
+  if (siteReady === null) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   // Si no eligió planta todavía → mostrar solo el modal, nada más
   if (!siteReady) {
