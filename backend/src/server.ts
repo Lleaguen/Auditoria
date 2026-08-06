@@ -21,6 +21,7 @@ async function bootstrap() {
   // Repositorios
   const auditRepo = new PostgresAuditRepository(pool);
   const userRepo  = new PostgresUserRepository(pool);
+  
 
   // App Express
   const app = express();
