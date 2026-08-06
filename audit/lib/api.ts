@@ -193,3 +193,45 @@ export async function savePlan(plan: Omit<AuditPlan, 'id' | 'createdBy' | 'creat
 export async function deletePlan(id: number): Promise<void> {
   await request<null>(`/api/plans/${id}`, { method: 'DELETE' });
 }
+
+// ── Post-Audits ───────────────────────────────────────────────────────────────
+
+export interface PostShipmentInput {
+  shipmentId:   string;
+  outboundId:   string;
+  labelingZone: string;
+}
+
+export interface SavePostAuditInput {
+  auditId:       number;
+  postDate:      string;
+  csvFilename:   string;
+  postShipments: PostShipmentInput[];
+}
+
+export async function fetchPostAudits(auditId?: number): Promise<import('./types').PostAuditResult[]> {
+  const qs = auditId ? `?auditId=${auditId}` : '';
+  return request<import('./types').PostAuditResult[]>(`/api/post-audits${qs}`);
+}
+
+export async function savePostAudit(input: SavePostAuditInput): Promise<import('./types').PostAuditResult> {
+  return request<import('./types').PostAuditResult>('/api/post-audits', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deletePostAudit(id: number): Promise<void> {
+  await request<null>(`/api/post-audits/${id}`, { method: 'DELETE' });
+}
+
+export async function fetchCorrectionStats(
+  fromDate?: string,
+  toDate?: string
+): Promise<import('./types').CorrectionStat[]> {
+  const params = new URLSearchParams();
+  if (fromDate) params.set('fromDate', fromDate);
+  if (toDate)   params.set('toDate',   toDate);
+  const qs = params.toString();
+  return request<import('./types').CorrectionStat[]>(`/api/post-audits/correction-stats${qs ? `?${qs}` : ''}`);
+}

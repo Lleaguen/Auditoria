@@ -82,6 +82,40 @@ export async function runMigrations(): Promise<void> {
     );
 
     CREATE INDEX IF NOT EXISTS idx_plans_date ON audit_plans(date);
+
+    -- ── Post-Audit: verificación post-corrección ──────────────────────────────
+    CREATE TABLE IF NOT EXISTS post_audits (
+      id          SERIAL PRIMARY KEY,
+      audit_id    INTEGER NOT NULL REFERENCES audits(id) ON DELETE CASCADE,
+      post_date   TEXT    NOT NULL,
+      csv_filename TEXT   NOT NULL DEFAULT '',
+      created_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      -- Totales de corrección
+      total_errors_found     INTEGER NOT NULL DEFAULT 0,
+      total_errors_corrected INTEGER NOT NULL DEFAULT 0,
+      UNIQUE(audit_id)  -- un solo post-audit por auditoría
+    );
+
+    CREATE TABLE IF NOT EXISTS post_audit_results (
+      id            SERIAL PRIMARY KEY,
+      post_audit_id INTEGER NOT NULL REFERENCES post_audits(id) ON DELETE CASCADE,
+      shipment_id   TEXT    NOT NULL,
+      -- Estado en cada etapa
+      status_pre    TEXT    NOT NULL DEFAULT '',  -- estado en el CSV original (PRE)
+      status_audit  TEXT    NOT NULL DEFAULT '',  -- estado detectado en la auditoría (AUDIT)
+      status_post   TEXT    NOT NULL DEFAULT '',  -- estado en el CSV post (POST)
+      -- Datos de contexto
+      hu_pre        TEXT    NOT NULL DEFAULT '',  -- outboundId en CSV pre
+      hu_post       TEXT    NOT NULL DEFAULT '',  -- outboundId en CSV post (puede ser diferente si fue corregido)
+      subca         TEXT    NOT NULL DEFAULT '',
+      corrected     BOOLEAN NOT NULL DEFAULT FALSE,
+      correction_note TEXT  NOT NULL DEFAULT ''
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_post_audits_audit_id   ON post_audits(audit_id);
+    CREATE INDEX IF NOT EXISTS idx_post_results_post_id   ON post_audit_results(post_audit_id);
+    CREATE INDEX IF NOT EXISTS idx_post_audits_created_by ON post_audits(created_by);
   `);
 
   await seedAdminUser(pool);

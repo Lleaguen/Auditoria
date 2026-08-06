@@ -144,3 +144,56 @@ export interface UserStats {
 
 // ── Turno ────────────────────────────────────────────────────────────────────
 export type Shift = 'TT' | 'TN' | 'TM' | '';
+
+// ── Post-Audit ────────────────────────────────────────────────────────────────
+
+export type PostAuditStatusPre   = 'in_hu';
+export type PostAuditStatusAudit = 'missing' | 'surplus' | 'crossed';
+export type PostAuditStatusPost  =
+  | 'removed'           // faltante eliminado del HU ✅
+  | 'still_in_hu'       // faltante sigue en el HU ❌
+  | 'added_to_hu'       // sobrante agregado al HU ✅
+  | 'not_in_hu'         // sobrante no fue agregado ❌
+  | 'different_subca'   // sobrante de otra Sub-CA — no aplica
+  | 'moved_to_correct_hu' // cruzado movido al HU correcto ✅
+  | 'still_crossed'     // cruzado sigue en el HU incorrecto ❌
+  | 'not_found_post'    // no aparece en el CSV post
+  | 'n/a';
+
+export interface PostAuditShipmentResult {
+  id?: number;
+  shipmentId:     string;
+  statusPre:      PostAuditStatusPre;
+  statusAudit:    PostAuditStatusAudit;
+  statusPost:     PostAuditStatusPost;
+  huPre:          string;
+  huPost:         string;
+  subca:          string;
+  corrected:      boolean;
+  correctionNote: string;
+}
+
+export interface PostAuditResult {
+  id?: number;
+  auditId:              number;
+  huId:                 string;
+  auditDate:            string;
+  auditSubca:           string;
+  postDate:             string;
+  csvFilename:          string;
+  createdBy?:           number;
+  createdAt?:           string;
+  totalErrorsFound:     number;
+  totalErrorsCorrected: number;
+  results:              PostAuditShipmentResult[];
+}
+
+export interface CorrectionStat {
+  user_id:                    number;
+  nombre:                     string;
+  username:                   string;
+  post_audits_realizados:     number;
+  total_errores_encontrados:  number;
+  total_errores_corregidos:   number;
+  tasa_correccion:            number;
+}

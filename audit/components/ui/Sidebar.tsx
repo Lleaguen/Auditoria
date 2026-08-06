@@ -3,16 +3,17 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart3, ClipboardCheck, Upload, Warehouse, Users, LogOut, Shield, User, Target, Building2, RefreshCw } from 'lucide-react';
+import { BarChart3, ClipboardCheck, Upload, Warehouse, Users, LogOut, Shield, User, Target, Building2, RefreshCw, ClipboardX } from 'lucide-react';
 import BackendStatus from './BackendStatus';
 import { useAuth } from '@/lib/authContext';
 import { SITES, SiteKey, getStoredSite, saveSite } from '@/lib/siteConfig';
 
 const NAV_ITEMS = [
-  { href: '/',          label: 'Cargar CSV',   icon: Upload,         desc: 'Dataset del sistema' },
-  { href: '/auditoria', label: 'Auditoría HU', icon: ClipboardCheck, desc: 'Escanear y comparar' },
-  { href: '/dashboard', label: 'Dashboard',    icon: BarChart3,      desc: 'Métricas y reportes' },
-  { href: '/plan',      label: 'Plan',         icon: Target,         desc: 'Plan vs real del día' },
+  { href: '/',            label: 'Cargar CSV',    icon: Upload,        desc: 'Dataset del sistema' },
+  { href: '/auditoria',   label: 'Auditoría HU',  icon: ClipboardCheck, desc: 'Escanear y comparar' },
+  { href: '/dashboard',   label: 'Dashboard',     icon: BarChart3,     desc: 'Métricas y reportes' },
+  { href: '/plan',        label: 'Plan',          icon: Target,        desc: 'Plan vs real del día' },
+  { href: '/post-audit',  label: 'Post-Audit',    icon: ClipboardX,    desc: 'Verificar correcciones' },
 ];
 
 const ADMIN_ITEMS = [

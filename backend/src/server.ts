@@ -10,6 +10,7 @@ import { createAuditRouter } from './modules/audits/infrastructure/AuditHttpRout
 import { PostgresUserRepository } from './modules/users/infrastructure/PostgresUserRepository';
 import { createUserRouter } from './modules/users/infrastructure/UserHttpRouter';
 import { createPlanRouter } from './modules/plans/PlanRouter';
+import { createPostAuditRouter } from './modules/post-audits/PostAuditRouter';
 
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
 
@@ -46,6 +47,9 @@ async function bootstrap() {
 
   // Plans — requiere token válido (lectura para todos, escritura solo admin)
   app.use('/api/plans', createPlanRouter(pool));
+
+  // Post-Audits — requiere token válido
+  app.use('/api/post-audits', requireAuth, createPostAuditRouter(pool));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
