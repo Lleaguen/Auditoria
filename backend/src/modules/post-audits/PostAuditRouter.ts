@@ -293,12 +293,19 @@ export function createPostAuditRouter(pool: Pool): Router {
       }> = [];
 
       for (const row of auditRows) {
-        // Shipments OK — pasan sin análisis
+        // Shipments OK — buscar en CSV post para mostrar dónde viaja
         if (row.audit_status === 'ok') {
+          const post = postMap.get(row.shipment_id);
           results.push({
             shipmentId: row.shipment_id, statusPre: 'in_hu', statusAudit: 'ok',
-            statusPost: 'n/a', huPre: auditHuId, huPost: '', subca: row.shipment_subca || auditSubca,
-            corrected: false, correctionNote: '',
+            statusPost: post ? (post.outboundId === auditHuId ? 'ok_same_hu' : 'ok_moved') : 'ok_not_found',
+            huPre: auditHuId,
+            huPost: post?.outboundId ?? '',
+            subca: row.shipment_subca || auditSubca,
+            corrected: false,
+            correctionNote: post
+              ? (post.outboundId === auditHuId ? 'Sigue en el mismo HU' : `Movido al HU ${post.outboundId}`)
+              : 'No encontrado en CSV post',
           });
           continue;
         }

@@ -109,11 +109,20 @@ function ResultTable({ results }: { results: PostAuditShipmentResult[] }) {
                     {AUDIT_LABEL[r.statusAudit] ?? r.statusAudit}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-center font-mono text-[11px] text-zinc-500 bg-zinc-50">{r.huPost || '—'}</td>
+                <td className="px-3 py-2 text-center font-mono text-[11px] text-zinc-500 bg-zinc-50">
+                  {r.huPost || <span className="text-zinc-300">—</span>}
+                </td>
                 <td className="px-3 py-2 bg-zinc-50">
                   <div className={`flex items-center gap-1.5 justify-center ${postInfo.color}`}>
                     {!isOk && <StatusIcon icon={postInfo.icon as 'ok' | 'err' | 'na'} />}
-                    <span className="text-[11px] font-medium">{postInfo.label}</span>
+                    <span className="text-[11px] font-medium">
+                      {isOk
+                        ? r.statusPost === 'ok_same_hu'  ? <span className="text-emerald-600">Mismo HU ✓</span>
+                        : r.statusPost === 'ok_moved'    ? <span className="text-yellow-600">HU distinto</span>
+                        : <span className="text-zinc-400">No encontrado</span>
+                        : postInfo.label
+                      }
+                    </span>
                   </div>
                 </td>
                 <td className="px-3 py-2 text-center">
