@@ -69,7 +69,7 @@ async function bootstrap() {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT',  () => shutdown('SIGINT'));
 }
-
+console.log("GENIAL")
 bootstrap().catch((err) => {
   console.error('[Fatal]', err);
   process.exit(1);
