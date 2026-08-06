@@ -197,14 +197,16 @@ export async function deletePlan(id: number): Promise<void> {
 // ── Post-Audits ───────────────────────────────────────────────────────────────
 
 export interface PostShipmentInput {
-  shipmentId:   string;
-  outboundId:   string;
-  labelingZone: string;
+  shipmentId:         string;
+  outboundId:         string;
+  labelingZone:       string;
+  outboundDateOpened: string;
 }
 
 export interface SavePostAuditInput {
   auditId:       number;
   postDate:      string;
+  csvDate:       string;
   csvFilename:   string;
   postShipments: PostShipmentInput[];
 }

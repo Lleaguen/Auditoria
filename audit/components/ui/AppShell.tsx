@@ -84,7 +84,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <div className="sticky top-0 h-screen shrink-0">
+        <Sidebar />
+      </div>
       <main className="flex-1 min-h-screen overflow-y-auto">
         <div className="w-full max-w-5xl mx-auto px-8 py-10">
           {children}

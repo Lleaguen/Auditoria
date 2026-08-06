@@ -66,7 +66,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-[240px] shrink-0 min-h-screen bg-zinc-950 flex flex-col border-r border-zinc-800/60">
+    <aside className="w-[240px] shrink-0 h-screen bg-zinc-950 flex flex-col border-r border-zinc-800/60 overflow-y-auto">
 
       {/* Logo */}
       <div className="px-5 py-6 border-b border-zinc-800/60">
