@@ -39,13 +39,20 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     throw new Error('Sesión expirada');
   }
 
-  const json = (await res.json()) as ApiResponse<T>;
+  let payload: ApiResponse<T> | null = null;
+  const text = await res.text();
 
-  if (!res.ok || !json.success) {
-    throw new Error(json.error ?? `Error HTTP ${res.status}`);
+  try {
+    payload = text ? JSON.parse(text) as ApiResponse<T> : null;
+  } catch {
+    throw new Error(text || `Error HTTP ${res.status}`);
   }
 
-  return json.data;
+  if (!res.ok || !payload?.success) {
+    throw new Error(payload?.error ?? `Error HTTP ${res.status}`);
+  }
+
+  return payload.data;
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────

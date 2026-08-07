@@ -14,18 +14,39 @@ export interface SiteOption {
 
 const STORAGE_KEY = 'audit_site';
 
+function getDefaultApiUrl(siteKey: SiteKey): string {
+  const envUrl = siteKey === 'CIU'
+    ? process.env.NEXT_PUBLIC_API_URL_CIU
+    : process.env.NEXT_PUBLIC_API_URL_EEV;
+
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim();
+  }
+
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+    const host = window.location.hostname;
+    const port = siteKey === 'CIU' ? '3001' : '3002';
+    return `${protocol}://${host}:${port}`;
+  }
+
+  return siteKey === 'CIU'
+    ? 'http://172.19.40.203:3001'
+    : 'http://172.19.84.190:3002';
+}
+
 export const SITES: SiteOption[] = [
   {
     key:    'CIU',
     label:  'Soldati (CIU)',
     color:  'indigo',
-    apiUrl: process.env.NEXT_PUBLIC_API_URL_CIU ?? 'http://localhost:3001',
+    apiUrl: getDefaultApiUrl('CIU'),
   },
   {
     key:    'EEV',
     label:  'Echeverría (EEV)',
     color:  'emerald',
-    apiUrl: process.env.NEXT_PUBLIC_API_URL_EEV ?? 'http://localhost:3002',
+    apiUrl: getDefaultApiUrl('EEV'),
   },
 ];
 
