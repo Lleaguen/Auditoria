@@ -15,8 +15,6 @@ import { createPostAuditRouter } from './modules/post-audits/PostAuditRouter';
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
 
 
-
-
 async function bootstrap() {
   const pool = getPool();
   await runMigrations();
