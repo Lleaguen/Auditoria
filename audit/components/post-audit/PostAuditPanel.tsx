@@ -59,8 +59,8 @@ function exportToExcel(pa: PostAuditResult) {
     'Estado AUDIT':    AUDIT_LABEL[r.statusAudit] ?? r.statusAudit,
     'HU (PRE)':        r.huPre,
     'HU (POST)':       r.huPost || '—',
-    'Estado POST':     r.statusAudit === 'ok' ? 'OK — sin novedad' : (POST_LABEL[r.statusPost]?.label ?? r.statusPost),
-    'Corregido':       r.statusAudit === 'ok' ? 'N/A' : r.corrected ? 'Sí' : 'No',
+    'Estado POST':     POST_LABEL[r.statusPost]?.label ?? r.statusPost,
+    'Corregido':       r.corrected ? 'Sí' : 'No',
     'Nota':            r.correctionNote,
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -90,18 +90,14 @@ function ResultTable({ results }: { results: PostAuditShipmentResult[] }) {
         </thead>
         <tbody className="bg-white divide-y divide-zinc-100">
           {results.map((r) => {
-            const isOk = r.statusAudit === 'ok';
-            const postInfo = isOk
-              ? { label: 'OK — sin novedad', color: 'text-zinc-400', icon: 'na' as const }
-              : (POST_LABEL[r.statusPost] ?? { label: r.statusPost, color: 'text-zinc-500', icon: 'na' as const });
+            const postInfo = POST_LABEL[r.statusPost] ?? { label: r.statusPost, color: 'text-zinc-500', icon: 'na' as const };
             return (
-              <tr key={r.shipmentId} className={`hover:bg-zinc-50 ${isOk ? 'opacity-50' : ''}`}>
+              <tr key={r.shipmentId} className="hover:bg-zinc-50">
                 <td className="px-3 py-2 font-mono text-zinc-700 text-[11px]">{r.shipmentId}</td>
                 <td className="px-3 py-2 text-zinc-500">{r.subca}</td>
                 <td className="px-3 py-2 text-center font-mono text-[11px] text-zinc-500 bg-zinc-50">{r.huPre}</td>
                 <td className="px-3 py-2 text-center bg-indigo-50/40">
                   <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                    isOk                        ? 'bg-emerald-100 text-emerald-700' :
                     r.statusAudit === 'missing' ? 'bg-red-100 text-red-700' :
                     r.statusAudit === 'surplus' ? 'bg-orange-100 text-orange-700' :
                                                    'bg-yellow-100 text-yellow-700'
@@ -114,25 +110,16 @@ function ResultTable({ results }: { results: PostAuditShipmentResult[] }) {
                 </td>
                 <td className="px-3 py-2 bg-zinc-50">
                   <div className={`flex items-center gap-1.5 justify-center ${postInfo.color}`}>
-                    {!isOk && <StatusIcon icon={postInfo.icon as 'ok' | 'err' | 'na'} />}
-                    <span className="text-[11px] font-medium">
-                      {isOk
-                        ? r.statusPost === 'ok_same_hu'  ? <span className="text-emerald-600">Mismo HU ✓</span>
-                        : r.statusPost === 'ok_moved'    ? <span className="text-yellow-600">HU distinto</span>
-                        : <span className="text-zinc-400">No encontrado</span>
-                        : postInfo.label
-                      }
-                    </span>
+                    <StatusIcon icon={postInfo.icon as 'ok' | 'err' | 'na'} />
+                    <span className="text-[11px] font-medium">{postInfo.label}</span>
                   </div>
                 </td>
                 <td className="px-3 py-2 text-center">
-                  {isOk
-                    ? <span className="text-zinc-300 text-[11px]">N/A</span>
-                    : r.corrected
-                      ? <CheckCircle2 size={15} className="text-emerald-500 mx-auto" />
-                      : r.statusPost === 'different_subca'
-                        ? <span className="text-zinc-300 text-[11px]">N/A</span>
-                        : <XCircle size={15} className="text-red-400 mx-auto" />
+                  {r.corrected
+                    ? <CheckCircle2 size={15} className="text-emerald-500 mx-auto" />
+                    : r.statusPost === 'different_subca'
+                      ? <span className="text-zinc-300 text-[11px]">N/A</span>
+                      : <XCircle size={15} className="text-red-400 mx-auto" />
                   }
                 </td>
                 <td className="px-3 py-2 text-zinc-400 text-[11px] max-w-[200px]">{r.correctionNote}</td>
