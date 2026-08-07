@@ -29,8 +29,8 @@ function getDefaultApiUrl(siteKey: SiteKey): string {
 
     if (host.includes('github.io')) {
       return siteKey === 'CIU'
-        ? 'https://172.19.40.203:3001'
-        : 'https://172.19.84.190:3002';
+        ? 'https://172.19.40.203'
+        : 'https://172.19.84.190';
     }
 
     const port = siteKey === 'CIU' ? '3001' : '3002';
@@ -38,8 +38,8 @@ function getDefaultApiUrl(siteKey: SiteKey): string {
   }
 
   return siteKey === 'CIU'
-    ? 'https://172.19.40.203:3001'
-    : 'https://172.19.84.190:3002';
+    ? 'https://172.19.40.203'
+    : 'https://172.19.84.190';
 }
 
 export const SITES: SiteOption[] = [
