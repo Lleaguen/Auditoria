@@ -17,7 +17,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // null = todavía no sabemos (pre-hidratación), true/false = ya sabemos
   const [siteReady, setSiteReady] = useState<boolean | null>(null);
   useEffect(() => {
-    setSiteReady(!!getStoredSite());
+    const stored = getStoredSite();
+    setSiteReady(stored === 'CIU' || stored === 'EEV');
   }, []);
 
   const cleanPath   = pathname.replace(/^\/Auditoria/, '') || '/';

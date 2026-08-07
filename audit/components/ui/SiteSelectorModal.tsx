@@ -13,7 +13,8 @@ export default function SiteSelectorModal({ onSelect }: Props) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (!getStoredSite()) setOpen(true);
+    const stored = getStoredSite();
+    setOpen(stored !== 'CIU' && stored !== 'EEV');
   }, []);
 
   const handleSelect = (key: SiteKey) => {
