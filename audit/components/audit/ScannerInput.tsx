@@ -58,6 +58,18 @@ export default function ScannerInput({
     [input, handleSubmit]
   );
 
+  const feedbackTone = paqueteriaAnalysis?.status === 'crossed'
+    ? 'border-amber-200 bg-amber-50 text-amber-800'
+    : paqueteriaAnalysis?.status === 'ok'
+    ? 'border-zinc-200 bg-zinc-50 text-zinc-700'
+    : 'border-red-200 bg-red-50 text-red-800';
+
+  const badgeTone = paqueteriaAnalysis?.status === 'crossed'
+    ? 'bg-amber-100 text-amber-700'
+    : paqueteriaAnalysis?.status === 'ok'
+    ? 'bg-zinc-100 text-zinc-600'
+    : 'bg-red-100 text-red-700';
+
   return (
     <div className="space-y-3">
       {/* Header */}
@@ -121,15 +133,15 @@ export default function ScannerInput({
       )}
 
       {auditMode === 'paqueteria' && paqueteriaAnalysis && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+        <div className={`rounded-xl border p-3 text-sm ${feedbackTone}`}>
           <div className="flex items-center justify-between gap-2">
             <span className="font-semibold">{paqueteriaAnalysis.shipmentId}</span>
-            <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold uppercase">
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${badgeTone}`}>
               {paqueteriaAnalysis.status}
             </span>
           </div>
-          <p className="mt-1 text-xs text-emerald-700">{paqueteriaAnalysis.reason}</p>
-          <p className="mt-1 text-xs text-emerald-700">Sub-CA: {paqueteriaAnalysis.subca}</p>
+          <p className="mt-1 text-xs opacity-90">{paqueteriaAnalysis.reason}</p>
+          <p className="mt-1 text-xs opacity-90">Sub-CA: {paqueteriaAnalysis.subca}</p>
         </div>
       )}
 
