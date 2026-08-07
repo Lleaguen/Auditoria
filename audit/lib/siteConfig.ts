@@ -20,19 +20,26 @@ function getDefaultApiUrl(siteKey: SiteKey): string {
     : process.env.NEXT_PUBLIC_API_URL_EEV;
 
   if (envUrl && envUrl.trim()) {
-    return envUrl.trim();
+    return envUrl.trim().replace(/\/$/, '');
   }
 
   if (typeof window !== 'undefined') {
     const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
     const host = window.location.hostname;
+
+    if (host.includes('github.io')) {
+      return siteKey === 'CIU'
+        ? 'https://172.19.40.203:3001'
+        : 'https://172.19.84.190:3002';
+    }
+
     const port = siteKey === 'CIU' ? '3001' : '3002';
     return `${protocol}://${host}:${port}`;
   }
 
   return siteKey === 'CIU'
-    ? 'http://172.19.40.203:3001'
-    : 'http://172.19.84.190:3002';
+    ? 'https://172.19.40.203:3001'
+    : 'https://172.19.84.190:3002';
 }
 
 export const SITES: SiteOption[] = [
