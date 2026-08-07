@@ -58,6 +58,21 @@ export default function ScannerInput({
     [input, handleSubmit]
   );
 
+  const labelByStatus = (status: string) => {
+    switch (status) {
+      case 'ok':
+        return 'OK';
+      case 'crossed':
+        return 'Cruzado';
+      case 'missing':
+        return 'Faltante';
+      case 'unmanifested':
+        return 'Sin manifestar';
+      default:
+        return status;
+    }
+  };
+
   const feedbackTone = paqueteriaAnalysis?.status === 'crossed'
     ? 'border-amber-200 bg-amber-50 text-amber-800'
     : paqueteriaAnalysis?.status === 'ok'
@@ -136,8 +151,8 @@ export default function ScannerInput({
         <div className={`rounded-xl border p-3 text-sm ${feedbackTone}`}>
           <div className="flex items-center justify-between gap-2">
             <span className="font-semibold">{paqueteriaAnalysis.shipmentId}</span>
-            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${badgeTone}`}>
-              {paqueteriaAnalysis.status}
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${badgeTone}`}>
+              {labelByStatus(paqueteriaAnalysis.status)}
             </span>
           </div>
           <p className="mt-1 text-xs opacity-90">{paqueteriaAnalysis.reason}</p>
