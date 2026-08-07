@@ -13,6 +13,7 @@ import { createPlanRouter } from './modules/plans/PlanRouter';
 import { createPostAuditRouter } from './modules/post-audits/PostAuditRouter';
 
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
+const HOST = process.env.HOST ?? '0.0.0.0';
 
 
 async function bootstrap() {
@@ -56,7 +57,7 @@ async function bootstrap() {
   app.use(notFoundHandler);
   app.use(errorHandler);
 
-  const server = app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, HOST, () => {
     console.log(`\n🚀 Servidor en http://0.0.0.0:${PORT}`);
     console.log(`   Health:  http://localhost:${PORT}/health`);
     console.log(`   Login:   POST http://localhost:${PORT}/api/auth/login`);

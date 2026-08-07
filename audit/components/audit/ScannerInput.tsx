@@ -3,6 +3,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { ScanLine, X, Trash2, Hash } from 'lucide-react';
 import { normalizeShipmentId } from '@/lib/csv-parser';
+import type { AuditMode, PaqueteriaAnalysis } from '@/lib/types';
 
 interface ScannerInputProps {
   scannedIds: string[];
@@ -10,6 +11,8 @@ interface ScannerInputProps {
   onRemove: (id: string) => void;
   onClear: () => void;
   disabled?: boolean;
+  auditMode?: AuditMode;
+  paqueteriaAnalysis?: PaqueteriaAnalysis | null;
 }
 
 export default function ScannerInput({
@@ -18,6 +21,8 @@ export default function ScannerInput({
   onRemove,
   onClear,
   disabled = false,
+  auditMode = 'voluminoso',
+  paqueteriaAnalysis,
 }: ScannerInputProps) {
   const [input, setInput] = useState('');
   const [lastAdded, setLastAdded] = useState('');
@@ -112,6 +117,19 @@ export default function ScannerInput({
         }`}>
           {duplicate ? '⚠ Ya bipeado:' : '✓ Agregado:'}
           <span className="font-mono font-semibold">{lastAdded}</span>
+        </div>
+      )}
+
+      {auditMode === 'paqueteria' && paqueteriaAnalysis && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-semibold">{paqueteriaAnalysis.shipmentId}</span>
+            <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold uppercase">
+              {paqueteriaAnalysis.status}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-emerald-700">{paqueteriaAnalysis.reason}</p>
+          <p className="mt-1 text-xs text-emerald-700">Sub-CA: {paqueteriaAnalysis.subca}</p>
         </div>
       )}
 

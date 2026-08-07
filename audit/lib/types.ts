@@ -144,6 +144,20 @@ export interface UserStats {
 
 // ── Turno ────────────────────────────────────────────────────────────────────
 export type Shift = 'TT' | 'TN' | 'TM' | '';
+export type AuditMode = 'voluminoso' | 'paqueteria';
+
+export interface PaqueteriaAnalysis {
+  shipmentId: string;
+  status: ShipmentScanStatus;
+  subca: string;
+  statusDescription: string;
+  labelingLastPrintUser: string;
+  labelingAuthorizationDate: string;
+  outboundUserIds: string;
+  dispatched: boolean;
+  crossedFromHu?: string;
+  reason: string;
+}
 
 // ── Post-Audit ────────────────────────────────────────────────────────────────
 

@@ -2,6 +2,7 @@ import type {
   ShipmentRow,
   AuditResult,
   ScannedShipment,
+  PaqueteriaAnalysis,
 } from './types';
 import { matchHuId } from './csv-parser';
 
@@ -160,6 +161,78 @@ export function runAudit(
 /**
  * Calcula estadísticas diarias para el dashboard.
  */
+export function analyzeShipmentForPaqueteria(
+  data: ShipmentRow[],
+  huId: string,
+  shipmentId: string
+): PaqueteriaAnalysis | null {
+  const normalized = shipmentId.trim();
+  if (!normalized) return null;
+
+  const systemRows = getShipmentsForHu(data, huId);
+  const systemIds = new Set(systemRows.map((r) => r.shipmentId));
+
+  if (systemIds.has(normalized)) {
+    const row = systemRows.find((r) => r.shipmentId === normalized)!;
+    const dispatched = (row.statusDescription || row.hubStatus || '').toLowerCase().includes('dispatch') || (row.hubStatus || '').toLowerCase().includes('dispatch');
+    return {
+      shipmentId: normalized,
+      status: 'ok',
+      subca: row.labelingZone || 'N/A',
+      statusDescription: row.statusDescription || row.hubStatus || '',
+      labelingLastPrintUser: row.labelingLastPrintUser || '',
+      labelingAuthorizationDate: row.labelingAuthorizationDate || '',
+      outboundUserIds: row.outboundUserIds || '',
+      dispatched,
+      reason: 'Shipment presente en el HU y coincide con el sistema.',
+    };
+  }
+
+  const found = data.find((r) => r.shipmentId === normalized);
+  if (found && !matchHuId(found.outboundId, huId)) {
+    const dispatched = (found.statusDescription || found.hubStatus || '').toLowerCase().includes('dispatch') || (found.hubStatus || '').toLowerCase().includes('dispatch');
+    return {
+      shipmentId: normalized,
+      status: 'crossed',
+      subca: found.labelingZone || 'N/A',
+      statusDescription: found.statusDescription || found.hubStatus || '',
+      labelingLastPrintUser: found.labelingLastPrintUser || '',
+      labelingAuthorizationDate: found.labelingAuthorizationDate || '',
+      outboundUserIds: found.outboundUserIds || '',
+      dispatched,
+      crossedFromHu: found.outboundId,
+      reason: `Shipment cruzado: pertenece al HU ${found.outboundId}.`,
+    };
+  }
+
+  if (found) {
+    const dispatched = (found.statusDescription || found.hubStatus || '').toLowerCase().includes('dispatch') || (found.hubStatus || '').toLowerCase().includes('dispatch');
+    return {
+      shipmentId: normalized,
+      status: 'missing',
+      subca: found.labelingZone || 'N/A',
+      statusDescription: found.statusDescription || found.hubStatus || '',
+      labelingLastPrintUser: found.labelingLastPrintUser || '',
+      labelingAuthorizationDate: found.labelingAuthorizationDate || '',
+      outboundUserIds: found.outboundUserIds || '',
+      dispatched,
+      reason: 'Shipment existe en el sistema pero no fue escaneado en este HU.',
+    };
+  }
+
+  return {
+    shipmentId: normalized,
+    status: 'unmanifested',
+    subca: 'N/A',
+    statusDescription: '',
+    labelingLastPrintUser: '',
+    labelingAuthorizationDate: '',
+    outboundUserIds: '',
+    dispatched: false,
+    reason: 'Shipment sin manifestar en el dataset.',
+  };
+}
+
 export function computeDailyStats(audits: AuditResult[]) {
   const byDate = new Map<string, AuditResult[]>();
   for (const a of audits) {

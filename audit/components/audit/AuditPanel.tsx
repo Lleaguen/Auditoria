@@ -10,8 +10,8 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { runAudit } from '@/lib/audit-engine';
-import type { AuditResult, Shift } from '@/lib/types';
+import { analyzeShipmentForPaqueteria, runAudit } from '@/lib/audit-engine';
+import type { AuditResult, AuditMode, PaqueteriaAnalysis, Shift } from '@/lib/types';
 import HuSearch from './HuSearch';
 import ScannerInput from './ScannerInput';
 import AuditTable from './AuditTable';
@@ -41,7 +41,9 @@ export default function AuditPanel() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [shift, setShift]               = useState<Shift>('TT');
   const [observations, setObservations] = useState('');
+  const [auditMode, setAuditMode]       = useState<AuditMode>('voluminoso');
   const [audit, setAudit]               = useState<AuditResult | null>(null);
+  const [paqueteriaAnalysis, setPaqueteriaAnalysis] = useState<PaqueteriaAnalysis | null>(null);
   const [saved, setSaved]               = useState(false);
   const [saving, setSaving]             = useState(false);
   const [saveError, setSaveError]       = useState<string | null>(null);
@@ -55,9 +57,26 @@ export default function AuditPanel() {
     setSaved(false);
   }, []);
 
-  const handleAddScan    = useCallback((id: string) => { setScannedIds((p) => [...p, id]); setSaved(false); }, []);
-  const handleRemoveScan = useCallback((id: string) => { setScannedIds((p) => p.filter((s) => s !== id)); setSaved(false); }, []);
-  const handleClearScans = useCallback(() => { setScannedIds([]); setSaved(false); }, []);
+  const handleAddScan = useCallback((id: string) => {
+    setScannedIds((p) => [...p, id]);
+    if (auditMode === 'paqueteria' && huId && state.csvData.length > 0) {
+      const analysis = analyzeShipmentForPaqueteria(state.csvData, huId, id);
+      setPaqueteriaAnalysis(analysis);
+    }
+    setSaved(false);
+  }, [auditMode, huId, state.csvData]);
+
+  const handleRemoveScan = useCallback((id: string) => {
+    setScannedIds((p) => p.filter((s) => s !== id));
+    setPaqueteriaAnalysis(null);
+    setSaved(false);
+  }, []);
+
+  const handleClearScans = useCallback(() => {
+    setScannedIds([]);
+    setPaqueteriaAnalysis(null);
+    setSaved(false);
+  }, []);
 
   // Al comparar, corre el audit y avanza al paso 3 (Resultado)
   const handleRunAudit = useCallback(() => {
@@ -140,7 +159,21 @@ export default function AuditPanel() {
               </div>
             </div>
           </div>
-          <div className="flex justify-end pt-1">
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setAuditMode('voluminoso')}
+                className={`px-3 py-2 rounded-xl text-sm font-semibold border ${auditMode === 'voluminoso' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-zinc-600 border-zinc-200'}`}
+              >
+                Voluminoso
+              </button>
+              <button
+                onClick={() => setAuditMode('paqueteria')}
+                className={`px-3 py-2 rounded-xl text-sm font-semibold border ${auditMode === 'paqueteria' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-zinc-600 border-zinc-200'}`}
+              >
+                Paquetería
+              </button>
+            </div>
             <button
               onClick={() => setStep(2)}
               className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-indigo-700 shadow-sm"
@@ -166,6 +199,8 @@ export default function AuditPanel() {
                 onRemove={handleRemoveScan}
                 onClear={handleClearScans}
                 disabled={!huId}
+                auditMode={auditMode}
+                paqueteriaAnalysis={paqueteriaAnalysis}
               />
             </div>
           )}
@@ -177,6 +212,7 @@ export default function AuditPanel() {
               <span>Fecha: <span className="font-semibold text-zinc-700">{date}</span></span>
               <span>Turno: <span className="font-semibold text-zinc-700">{shift}</span></span>
               <span>Bipeados: <span className="font-semibold text-zinc-700">{scannedIds.length}</span></span>
+              <span>Modo: <span className="font-semibold text-zinc-700">{auditMode === 'paqueteria' ? 'Paquetería' : 'Voluminoso'}</span></span>
             </div>
           )}
 
