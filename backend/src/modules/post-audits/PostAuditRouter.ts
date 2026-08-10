@@ -237,7 +237,15 @@ export function createPostAuditRouter(pool: Pool): Router {
         return;
       }
 
-      // Verificar que la auditoría existe y su fecha coincide con la del CSV
+      // Obtener los HU IDs únicos del CSV
+      const huIdsInCsv = [...new Set(body.postShipments.map((s) => s.outboundId).filter(Boolean))];
+
+      if (huIdsInCsv.length === 0) {
+        res.status(400).json({ success: false, error: 'El CSV no contiene outboundIds válidos' });
+        return;
+      }
+
+      // Verificar que la auditoría solicitada existe
       const { rows: auditInfo } = await client.query(
         'SELECT id, hu_id, date, subca FROM audits WHERE id = $1',
         [body.auditId]
@@ -247,13 +255,12 @@ export function createPostAuditRouter(pool: Pool): Router {
         return;
       }
 
-      const auditDate = auditInfo[0].date as string; // YYYY-MM-DD
-      const csvDate   = body.csvDate;                // YYYY-MM-DD
-
-      if (csvDate && auditDate !== csvDate) {
+      // Verificar que el HU de la auditoría está en el CSV
+      const auditHuId = auditInfo[0].hu_id as string;
+      if (!huIdsInCsv.includes(auditHuId)) {
         res.status(400).json({
           success: false,
-          error: `La fecha del CSV (${csvDate}) no coincide con la fecha de la auditoría (${auditDate}). Cargá el CSV del mismo día.`,
+          error: `El HU ${auditHuId} no está en el CSV cargado`,
         });
         return;
       }
@@ -278,8 +285,7 @@ export function createPostAuditRouter(pool: Pool): Router {
         return;
       }
 
-      const auditHuId  = auditRows[0].hu_id  as string;
-      const auditSubca = auditRows[0].subca   as string;
+      const auditSubca = auditInfo[0].subca as string;
 
       // Mapa del CSV post para búsqueda O(1)
       const postMap = new Map<string, PostShipment>();

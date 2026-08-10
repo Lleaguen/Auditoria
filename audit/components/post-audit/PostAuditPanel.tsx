@@ -238,25 +238,31 @@ export default function PostAuditPanel() {
 
   React.useEffect(() => { loadData(); }, [loadData]);
 
-  // Cuando hay CSV cargado, filtrar automáticamente por fecha del CSV
+  // Cuando hay CSV cargado, filtrar por HU IDs que están en el CSV
+  const huIdsInCsv = useMemo(() =>
+    new Set(csvRows.map((r) => r.outboundId).filter(Boolean)),
+  [csvRows]);
+
   const filteredAudits = useMemo(() => {
     let result = audits;
-    // Filtrar por fecha del CSV si está disponible
-    if (csvDate) {
-      result = result.filter((a) => a.date === csvDate);
+    // Si hay CSV, mostrar solo auditorías cuyos HUs están en el CSV
+    if (csvRows.length > 0) {
+      result = result.filter((a) => huIdsInCsv.has(a.huId));
     }
     // Filtrar por Sub-CA si está seleccionada
     if (filterSubca) {
       result = result.filter((a) => a.subca === filterSubca);
     }
     return result;
-  }, [audits, csvDate, filterSubca]);
+  }, [audits, csvRows, huIdsInCsv, filterSubca]);
 
-  // Sub-CAs únicas de las auditorías filtradas por fecha
+  // Sub-CAs únicas de las auditorías que matchean el CSV
   const subcaOptions = useMemo(() => {
-    const base = csvDate ? audits.filter((a) => a.date === csvDate) : audits;
+    const base = csvRows.length > 0
+      ? audits.filter((a) => huIdsInCsv.has(a.huId))
+      : audits;
     return Array.from(new Set(base.map((a) => a.subca).filter(Boolean))).sort();
-  }, [audits, csvDate]);
+  }, [audits, csvRows, huIdsInCsv]);
 
   const handleFile = useCallback(async (file: File) => {
     setLoadingCsv(true);
@@ -365,7 +371,7 @@ export default function PostAuditPanel() {
                   <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-emerald-800 truncate">{csvFilename}</p>
-                    <p className="text-xs text-emerald-600">{csvRows.length.toLocaleString()} shipments · fecha {csvDate}</p>
+                    <p className="text-xs text-emerald-600">{csvRows.length.toLocaleString()} shipments cargados</p>
                   </div>
                   <button onClick={() => { setCsvRows([]); setCsvFilename(''); setCsvDate(''); setFilterSubca(''); }}
                     className="text-emerald-400 hover:text-red-400 p-1 rounded-lg hover:bg-red-50 transition-colors shrink-0">
@@ -377,7 +383,7 @@ export default function PostAuditPanel() {
           </div>
 
           {/* Filtro Sub-CA — solo cuando hay CSV */}
-          {csvDate && (
+          {csvRows.length > 0 && subcaOptions.length > 0 && (
             <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm p-4">
               <label className="text-xs font-semibold text-zinc-400 uppercase tracking-widest block mb-2">
                 Filtrar por Sub-CA
@@ -387,7 +393,7 @@ export default function PostAuditPanel() {
                 onChange={(e) => setFilterSubca(e.target.value)}
                 className="input-base text-sm w-full"
               >
-                <option value="">Todas ({audits.filter((a) => a.date === csvDate).length} auditorías)</option>
+                <option value="">Todas ({audits.filter((a) => huIdsInCsv.has(a.huId)).length} auditorías)</option>
                 {subcaOptions.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -401,9 +407,9 @@ export default function PostAuditPanel() {
           <h2 className="text-sm font-bold text-zinc-700 mb-3 flex items-center gap-2 shrink-0">
             <Search size={14} className="text-indigo-500" />
             2. Seleccioná la auditoría a comparar
-            {csvDate && (
+            {csvRows.length > 0 && (
               <span className="ml-auto text-xs font-normal text-zinc-400">
-                {filteredAudits.length} del {csvDate}
+                {filteredAudits.length} HUs encontrados en CSV
               </span>
             )}
           </h2>
@@ -414,13 +420,13 @@ export default function PostAuditPanel() {
                 <RefreshCw size={14} className="animate-spin" />
                 <span className="text-sm">Cargando...</span>
               </div>
-            ) : !csvDate ? (
+            ) : csvRows.length === 0 ? (
               <p className="text-sm text-zinc-400 text-center py-8">
-                Cargá el CSV primero — la lista se filtra automáticamente por la fecha del archivo.
+                Cargá el CSV — la lista se filtra automáticamente mostrando los HUs del archivo que tienen errores registrados.
               </p>
             ) : filteredAudits.length === 0 ? (
               <p className="text-sm text-zinc-400 text-center py-8">
-                No hay auditorías con errores del {csvDate}.
+                No hay auditorías con errores para los HUs del CSV.
               </p>
             ) : (
               filteredAudits.map((a) => {
