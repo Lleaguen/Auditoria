@@ -392,7 +392,7 @@ export default function PostAuditPanel() {
                 onChange={(e) => setFilterSubca(e.target.value)}
                 className="input-base text-sm w-full"
               >
-                <option value="">Todas ({audits.filter((a) => huIdsInCsv.some((csvHu) => matchHuId(csvHu, a.huId) || matchHuId(a.huId, csvHu) || csvHu === a.huId)).length} auditorías)</option>
+                <option value="">Todas ({audits.filter((a) => Array.from(huIdsInCsv).some((csvHu) => matchHuId(csvHu, a.huId) || matchHuId(a.huId, csvHu) || csvHu === a.huId)).length} auditorías)</option>
                 {subcaOptions.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
