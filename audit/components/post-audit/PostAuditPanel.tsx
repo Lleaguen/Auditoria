@@ -212,6 +212,7 @@ export default function PostAuditPanel() {
   const [loadingData, setLoadingData] = useState(false);
   const [saving, setSaving]           = useState(false);
   const [savingId, setSavingId]       = useState<number | null>(null);
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
   const [error, setError]             = useState('');
 
   const [filterSubca, setFilterSubca] = useState('');
@@ -301,12 +302,16 @@ export default function PostAuditPanel() {
     setSavingId(audit.id!);
     setError('');
     try {
-      const postShipments = csvRows.map((r) => ({
-        shipmentId:         r.shipmentId,
-        outboundId:         r.outboundId,
-        labelingZone:       r.labelingZone,
-        outboundDateOpened: r.outboundDateOpened,
-      }));
+      // Solo enviar los shipments del CSV que pertenecen al HU auditado
+      // Esto evita enviar todo el CSV (puede ser muy grande)
+      const postShipments = csvRows
+        .filter((r) => matchHuId(r.outboundId, audit.huId) || r.outboundId === audit.huId)
+        .map((r) => ({
+          shipmentId:         r.shipmentId,
+          outboundId:         r.outboundId,
+          labelingZone:       r.labelingZone,
+          outboundDateOpened: r.outboundDateOpened,
+        }));
       const result = await savePostAudit({
         auditId:     audit.id!,
         postDate:    new Date().toISOString().slice(0, 10),

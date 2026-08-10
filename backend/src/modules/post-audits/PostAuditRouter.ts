@@ -237,13 +237,8 @@ export function createPostAuditRouter(pool: Pool): Router {
         return;
       }
 
-      // Obtener los HU IDs únicos del CSV
-      const huIdsInCsv = [...new Set(body.postShipments.map((s) => s.outboundId).filter(Boolean))];
-
-      if (huIdsInCsv.length === 0) {
-        res.status(400).json({ success: false, error: 'El CSV no contiene outboundIds válidos' });
-        return;
-      }
+      // El frontend ya filtra los shipments del HU específico antes de enviar
+      // postShipments contiene solo los shipments del HU auditado
 
       // Verificar que la auditoría solicitada existe
       const { rows: auditInfo } = await client.query(
@@ -256,27 +251,8 @@ export function createPostAuditRouter(pool: Pool): Router {
       }
 
       const auditHuId = auditInfo[0].hu_id as string;
-      // Usar matching flexible para manejar notación científica truncada
-      const huInCsv = huIdsInCsv.some((csvId) => {
-        if (csvId === auditHuId) return true;
-        // Matching por prefijo si el CSV tiene ceros de relleno
-        const trailingZeros = csvId.match(/0+$/)?.[0].length ?? 0;
-        const sigDigits = csvId.length - trailingZeros;
-        if (sigDigits >= 4 && auditHuId.length > csvId.length) {
-          return csvId.substring(0, sigDigits) === auditHuId.substring(0, sigDigits);
-        }
-        return false;
-      });
 
-      if (!huInCsv) {
-        res.status(400).json({
-          success: false,
-          error: `El HU ${auditHuId} no está en el CSV cargado`,
-        });
-        return;
-      }
-
-      // Todos los shipments del HU auditado
+      // Si no hay shipments del HU en el CSV, el postMap quedará vacío
       const { rows: auditRows } = await client.query(`
         SELECT a.hu_id, a.subca, a.date,
                asr.shipment_id, asr.status AS audit_status, asr.subca AS shipment_subca
