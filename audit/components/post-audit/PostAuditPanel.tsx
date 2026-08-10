@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useMemo } from 'react';
-import { parseCSV, normalizeRow } from '@/lib/csv-parser';
+import { parseCSV, normalizeRow, matchHuId } from '@/lib/csv-parser';
 import { fetchAudits, savePostAudit, fetchPostAudits, deletePostAudit } from '@/lib/api';
 import type { AuditResult, PostAuditResult, PostAuditShipmentResult } from '@/lib/types';
 import * as XLSX from 'xlsx';
@@ -245,21 +245,21 @@ export default function PostAuditPanel() {
 
   const filteredAudits = useMemo(() => {
     let result = audits;
-    // Si hay CSV, mostrar solo auditorías cuyos HUs están en el CSV
     if (csvRows.length > 0) {
-      result = result.filter((a) => huIdsInCsv.has(a.huId));
+      // Usar matchHuId para manejar notación científica truncada
+      result = result.filter((a) =>
+        Array.from(huIdsInCsv).some((csvId) => matchHuId(csvId, a.huId) || csvId === a.huId)
+      );
     }
-    // Filtrar por Sub-CA si está seleccionada
     if (filterSubca) {
       result = result.filter((a) => a.subca === filterSubca);
     }
     return result;
   }, [audits, csvRows, huIdsInCsv, filterSubca]);
 
-  // Sub-CAs únicas de las auditorías que matchean el CSV
   const subcaOptions = useMemo(() => {
     const base = csvRows.length > 0
-      ? audits.filter((a) => huIdsInCsv.has(a.huId))
+      ? audits.filter((a) => Array.from(huIdsInCsv).some((csvId) => matchHuId(csvId, a.huId) || csvId === a.huId))
       : audits;
     return Array.from(new Set(base.map((a) => a.subca).filter(Boolean))).sort();
   }, [audits, csvRows, huIdsInCsv]);
@@ -274,7 +274,6 @@ export default function PostAuditPanel() {
       const rows = parseCSV(text).map(normalizeRow);
       if (rows.length === 0) { setCsvError('El CSV está vacío o no se pudo parsear.'); return; }
       const date = extractDateFromCsv(rows);
-      if (!date) { setCsvError('No se pudo determinar la fecha del CSV (columna Outbound Date Opened).'); return; }
       setCsvRows(rows);
       setCsvFilename(file.name);
       setCsvDate(date);
@@ -393,7 +392,7 @@ export default function PostAuditPanel() {
                 onChange={(e) => setFilterSubca(e.target.value)}
                 className="input-base text-sm w-full"
               >
-                <option value="">Todas ({audits.filter((a) => huIdsInCsv.has(a.huId)).length} auditorías)</option>
+                <option value="">Todas ({audits.filter((a) => huIdsInCsv.some((csvHu) => matchHuId(csvHu, a.huId) || matchHuId(a.huId, csvHu) || csvHu === a.huId)).length} auditorías)</option>
                 {subcaOptions.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}

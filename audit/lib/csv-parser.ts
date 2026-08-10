@@ -68,11 +68,15 @@ function normalizeHeader(h: string): string {
 }
 
 export function parseCSV(text: string): ShipmentRow[] {
+  // Autodetectar delimitador: si la primera línea tiene más ";" que "," usar ";"
+  const firstLine = text.split('\n')[0] ?? '';
+  const delimiter = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
+
   const result = Papa.parse<Record<string, string>>(text, {
     header: true,
     skipEmptyLines: true,
     transformHeader: normalizeHeader,
-    delimiter: ',',
+    delimiter,
   });
 
   return result.data.map((raw) => {

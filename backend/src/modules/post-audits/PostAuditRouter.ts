@@ -255,9 +255,20 @@ export function createPostAuditRouter(pool: Pool): Router {
         return;
       }
 
-      // Verificar que el HU de la auditoría está en el CSV
       const auditHuId = auditInfo[0].hu_id as string;
-      if (!huIdsInCsv.includes(auditHuId)) {
+      // Usar matching flexible para manejar notación científica truncada
+      const huInCsv = huIdsInCsv.some((csvId) => {
+        if (csvId === auditHuId) return true;
+        // Matching por prefijo si el CSV tiene ceros de relleno
+        const trailingZeros = csvId.match(/0+$/)?.[0].length ?? 0;
+        const sigDigits = csvId.length - trailingZeros;
+        if (sigDigits >= 4 && auditHuId.length > csvId.length) {
+          return csvId.substring(0, sigDigits) === auditHuId.substring(0, sigDigits);
+        }
+        return false;
+      });
+
+      if (!huInCsv) {
         res.status(400).json({
           success: false,
           error: `El HU ${auditHuId} no está en el CSV cargado`,
