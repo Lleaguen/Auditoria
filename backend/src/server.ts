@@ -11,6 +11,8 @@ import { PostgresUserRepository } from './modules/users/infrastructure/PostgresU
 import { createUserRouter } from './modules/users/infrastructure/UserHttpRouter';
 import { createPlanRouter } from './modules/plans/PlanRouter';
 import { createPostAuditRouter } from './modules/post-audits/PostAuditRouter';
+import { registerBackupScheduler } from './shared/backup/BackupScheduler';
+import { runDailyBackup } from './shared/backup/BackupService';
 
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
 const HOST = process.env.HOST ?? '0.0.0.0';
@@ -53,6 +55,27 @@ async function bootstrap() {
 
   // Post-Audits — requiere token válido
   app.use('/api/post-audits', requireAuth, createPostAuditRouter(pool));
+
+  // ── Backup manual (solo admin) ────────────────────────────────────────────
+  app.post('/api/backup/run', requireAuth, async (req, res, next) => {
+    try {
+      if (req.user?.role !== 'admin') {
+        res.status(403).json({ success: false, error: 'Solo el admin puede ejecutar el backup.' });
+        return;
+      }
+      // Ejecutar en background para no bloquear la respuesta
+      runDailyBackup(pool)
+        .then(() => console.log('[Backup] Ejecución manual completada.'))
+        .catch((err) => console.error('[Backup] Error en ejecución manual:', err));
+
+      res.json({ success: true, message: 'Backup iniciado. Se generará el archivo y se limpiarán los datos de ayer.' });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ── Registrar scheduler automático ───────────────────────────────────────
+  registerBackupScheduler(pool);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
