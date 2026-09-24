@@ -68,7 +68,6 @@ export default function SiteSelectorModal({ onSelect }: Props) {
               </div>
               <div>
                 <p className="font-semibold text-zinc-800">{site.label}</p>
-                <p className="text-xs text-zinc-400 mt-0.5 font-mono truncate">{site.apiUrl}</p>
               </div>
             </button>
           ))}

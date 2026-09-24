@@ -1,4 +1,5 @@
 export type UserRole = 'admin' | 'auditor';
+export type SiteKey  = 'CIU' | 'EEV' | '';
 
 export interface User {
   id?: number;
@@ -7,6 +8,7 @@ export interface User {
   username: string;
   passwordHash?: string; // no se devuelve al frontend
   role: UserRole;
+  site: SiteKey;
   active: boolean;
   createdAt?: string;
 }
@@ -17,6 +19,7 @@ export interface UserPublic {
   apellido: string;
   username: string;
   role: UserRole;
+  site: SiteKey;
   active: boolean;
   createdAt?: string;
 }
@@ -28,6 +31,7 @@ export function toPublicUser(user: User): UserPublic {
     apellido:  user.apellido,
     username:  user.username,
     role:      user.role,
+    site:      user.site,
     active:    user.active,
     createdAt: user.createdAt,
   };

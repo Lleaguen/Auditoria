@@ -24,6 +24,7 @@ export interface Audit {
   shift: Shift;
   subca: string;
   observations: string;
+  site: string;        // código de planta: ARXCF1 (CIU) o ARXBA3 (EEV)
   systemShipments: string[];
   scannedShipments: string[];
   results: ScannedShipmentResult[];

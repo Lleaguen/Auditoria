@@ -9,6 +9,7 @@ interface UserRow {
   username: string;
   password_hash: string;
   role: string;
+  site: string;
   active: boolean;
   created_at: Date;
 }
@@ -24,6 +25,7 @@ export class PostgresUserRepository implements UserRepository {
       username:     row.username,
       passwordHash: row.password_hash,
       role:         row.role as UserRole,
+      site:         (row.site ?? '') as User['site'],
       active:       row.active,
       createdAt:    row.created_at instanceof Date
         ? row.created_at.toISOString()
@@ -56,10 +58,10 @@ export class PostgresUserRepository implements UserRepository {
 
   async save(user: Omit<User, 'id' | 'createdAt'> & { passwordHash: string }): Promise<User> {
     const { rows } = await this.pool.query<UserRow>(
-      `INSERT INTO users (nombre, apellido, username, password_hash, role, active)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO users (nombre, apellido, username, password_hash, role, site, active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [user.nombre, user.apellido, user.username, user.passwordHash, user.role, user.active]
+      [user.nombre, user.apellido, user.username, user.passwordHash, user.role, user.site ?? '', user.active]
     );
     return this.rowToUser(rows[0]);
   }

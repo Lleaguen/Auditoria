@@ -108,6 +108,7 @@ export default function UsersPanel() {
               <tr className="bg-zinc-900 text-zinc-300">
                 <th className="px-4 py-3 text-left font-semibold">Nombre</th>
                 <th className="px-4 py-3 text-left font-semibold">Username</th>
+                <th className="px-4 py-3 text-left font-semibold">Planta</th>
                 <th className="px-4 py-3 text-left font-semibold">Rol</th>
                 <th className="px-4 py-3 text-left font-semibold">Estado</th>
                 <th className="px-4 py-3 text-left font-semibold">Creado</th>
@@ -130,6 +131,15 @@ export default function UsersPanel() {
                     </div>
                   </td>
                   <td className="px-4 py-3 font-mono text-zinc-600 text-sm">{u.username}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${
+                      u.site === 'CIU' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                      u.site === 'EEV' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      'bg-zinc-100 text-zinc-400 border-zinc-200'
+                    }`}>
+                      {u.site || '—'}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     {isSuperAdmin && u.username !== 'admin' ? (
                       <div className="relative inline-flex items-center">
@@ -208,6 +218,7 @@ function CreateUserModal({
     username: '',
     password: '',
     role:     'auditor' as UserRole,
+    site:     '' as 'CIU' | 'EEV' | '',
   });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading]   = useState(false);
@@ -311,6 +322,18 @@ function CreateUserModal({
             >
               <option value="auditor">Auditor</option>
               <option value="admin">Admin</option>
+            </select>
+          </Field>
+
+          <Field label="Planta">
+            <select
+              value={form.site}
+              onChange={handleChange('site')}
+              className="input-base"
+            >
+              <option value="">Sin restricción (admin)</option>
+              <option value="CIU">CIU — Soldati</option>
+              <option value="EEV">EEV — Echeverría</option>
             </select>
           </Field>
 

@@ -18,8 +18,8 @@ export function createUserRouter(repo: UserRepository): Router {
   // ── POST /api/auth/login ──────────────────────────────────────────────────
   router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { username, password } = req.body;
-      const result = await login.execute(username, password);
+      const { username, password, site } = req.body;
+      const result = await login.execute(username, password, site);
       res.json({ success: true, data: result });
     } catch (err) {
       next(err);
@@ -54,13 +54,14 @@ export function createUserRouter(repo: UserRepository): Router {
   // ── POST /api/auth/users — solo admin ─────────────────────────────────────
   router.post('/users', requireAuth, requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { nombre, apellido, username, password, role } = req.body;
+      const { nombre, apellido, username, password, role, site } = req.body;
       const user = await createUser.execute({
         nombre,
         apellido,
         username,
         password,
-        role: (role ?? 'auditor') as UserRole,
+        role:  (role ?? 'auditor') as UserRole,
+        site:  (site ?? '') as 'CIU' | 'EEV' | '',
       });
       res.status(201).json({ success: true, data: user });
     } catch (err) {

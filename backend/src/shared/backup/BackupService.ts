@@ -1,7 +1,6 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import * as XLSX from 'xlsx';
 import { Pool } from 'pg';
+import { Resend } from 'resend';
 
 // ── Tipos internos ────────────────────────────────────────────────────────────
 
@@ -42,16 +41,10 @@ interface ShipmentResultRow {
   crossed_from_hu: string | null;
 }
 
-// ── Directorio de backups ─────────────────────────────────────────────────────
-// Se guarda en <raíz del proceso>/backups
-const BACKUP_DIR = path.resolve(process.cwd(), 'backups');
-
-function ensureBackupDir(): void {
-  if (!fs.existsSync(BACKUP_DIR)) {
-    fs.mkdirSync(BACKUP_DIR, { recursive: true });
-    console.log(`[Backup] Directorio creado: ${BACKUP_DIR}`);
-  }
-}
+// ── Cliente de Resend ─────────────────────────────────────────────────────────
+const resend = new Resend(process.env.RESEND_API_KEY);
+const BACKUP_EMAIL_TO   = process.env.BACKUP_EMAIL_TO   ?? 'franco.nahuel.romero@ocasa.com';
+const BACKUP_EMAIL_FROM = process.env.BACKUP_EMAIL_FROM ?? 'onboarding@resend.dev';
 
 // ── Generador del Excel ───────────────────────────────────────────────────────
 
@@ -221,8 +214,6 @@ export async function runDailyBackup(pool: Pool): Promise<void> {
 
   console.log(`[Backup] Iniciando backup del día ${targetDate}...`);
 
-  ensureBackupDir();
-
   // 1. Obtener auditorías del día objetivo
   const { rows: auditRows } = await pool.query<AuditRow>(
     `SELECT a.*,
@@ -241,7 +232,7 @@ export async function runDailyBackup(pool: Pool): Promise<void> {
   }
 
   // 2. Obtener todos los shipment results de esas auditorías
-  const auditIds = auditRows.map((r) => r.id);
+  const auditIds     = auditRows.map((r) => r.id);
   const placeholders = auditIds.map((_, i) => `$${i + 1}`).join(', ');
   const { rows: shipmentRows } = await pool.query<ShipmentResultRow>(
     `SELECT * FROM audit_shipment_results
@@ -250,21 +241,47 @@ export async function runDailyBackup(pool: Pool): Promise<void> {
     auditIds
   );
 
-  // 3. Generar el Excel
+  // 3. Generar el Excel en memoria (sin escribir al disco)
   const wb       = buildExcel(auditRows, shipmentRows);
   const filename = `backup_${targetDate}.xlsx`;
-  const filepath = path.join(BACKUP_DIR, filename);
-  XLSX.writeFile(wb, filepath);
-  console.log(`[Backup] Excel generado: ${filepath}`);
+  // write() devuelve un Buffer cuando se pasa type: 'buffer'
+  const buffer   = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+  console.log(`[Backup] Excel generado en memoria (${buffer.length} bytes).`);
 
-  // 4. Eliminar datos auditados (CASCADE borra shipment_results y post_audit_results)
-  //    Solo se eliminan registros del día objetivo. Usuarios NO se tocan.
+  // 4. Enviar por email con el Excel como adjunto
+  const { error: emailError } = await resend.emails.send({
+    from:    BACKUP_EMAIL_FROM,
+    to:      BACKUP_EMAIL_TO,
+    subject: `Backup auditorías ${targetDate}`,
+    html: `
+      <p>Backup automático del sistema de auditorías.</p>
+      <p><strong>Fecha:</strong> ${targetDate}</p>
+      <p><strong>HUs auditados:</strong> ${auditRows.length}</p>
+      <p><strong>Shipments:</strong> ${shipmentRows.length}</p>
+      <p>El archivo Excel con el detalle completo se adjunta a este correo.</p>
+    `,
+    attachments: [
+      {
+        filename: filename,
+        content:  buffer,
+      },
+    ],
+  });
+
+  if (emailError) {
+    // Si falla el email NO borramos los datos — se reintentará en el próximo cron
+    console.error('[Backup] Error al enviar el email. Los datos NO fueron eliminados:', emailError);
+    throw new Error(`[Backup] Fallo el envío del email: ${emailError.message}`);
+  }
+
+  console.log(`[Backup] Email enviado a ${BACKUP_EMAIL_TO} con adjunto ${filename}.`);
+
+  // 5. Eliminar datos auditados SOLO si el email fue exitoso
+  //    (CASCADE borra shipment_results y post_audit_results automáticamente)
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // post_audits referencia a audits con ON DELETE CASCADE, se borran solos
-    // audit_shipment_results también con CASCADE
     const { rowCount } = await client.query(
       `DELETE FROM audits WHERE date = $1`,
       [targetDate]
@@ -280,8 +297,7 @@ export async function runDailyBackup(pool: Pool): Promise<void> {
     console.log(`[Backup] ${rowCount} auditorías eliminadas de la DB para ${targetDate}.`);
   } catch (err) {
     await client.query('ROLLBACK');
-    // Si falla el borrado, el archivo Excel ya fue generado — no se pierde nada
-    console.error('[Backup] Error al limpiar la DB (el Excel fue guardado):', err);
+    console.error('[Backup] Error al limpiar la DB (el email ya fue enviado):', err);
     throw err;
   } finally {
     client.release();

@@ -8,6 +8,7 @@ export interface AuthUser {
   apellido: string;
   username: string;
   role: UserRole;
+  site: string;
   active: boolean;
   createdAt?: string;
 }

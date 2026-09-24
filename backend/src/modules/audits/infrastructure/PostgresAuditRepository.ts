@@ -11,6 +11,7 @@ interface AuditRow {
   shift: string;
   subca: string;
   observations: string;
+  site: string;
   total_system: number;
   total_scanned: number;
   total_ok: number;
@@ -62,6 +63,7 @@ export class PostgresAuditRepository implements AuditRepository {
       shift:             row.shift as Audit['shift'],
       subca:             row.subca,
       observations:      row.observations ?? '',
+      site:              row.site ?? '',
       totalSystem:       Number(row.total_system),
       totalScanned:      Number(row.total_scanned),
       totalOk:           Number(row.total_ok),
@@ -131,14 +133,15 @@ export class PostgresAuditRepository implements AuditRepository {
       // Upsert: si ya existe el mismo hu_id + date, actualiza todo
       const upsertResult = await client.query<{ id: number }>(
         `INSERT INTO audits (
-          hu_id, date, shift, subca, observations,
+          hu_id, date, shift, subca, observations, site,
           total_system, total_scanned, total_ok, total_missing, total_surplus, total_crossed, total_unmanifested,
           assembly_users, crossed_hus, system_shipments, scanned_shipments, created_by
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
         ON CONFLICT (hu_id, date) DO UPDATE SET
           shift              = EXCLUDED.shift,
           subca              = EXCLUDED.subca,
           observations       = EXCLUDED.observations,
+          site               = EXCLUDED.site,
           total_system       = EXCLUDED.total_system,
           total_scanned      = EXCLUDED.total_scanned,
           total_ok           = EXCLUDED.total_ok,
@@ -157,6 +160,7 @@ export class PostgresAuditRepository implements AuditRepository {
           audit.shift,
           audit.subca,
           audit.observations ?? '',
+          audit.site ?? '',
           audit.totalSystem,
           audit.totalScanned,
           audit.totalOk,

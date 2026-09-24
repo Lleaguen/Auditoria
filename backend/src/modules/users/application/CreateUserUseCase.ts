@@ -8,6 +8,7 @@ interface CreateUserInput {
   username: string;
   password: string;
   role: UserRole;
+  site: 'CIU' | 'EEV' | '';
 }
 
 export class CreateUserUseCase {
@@ -42,6 +43,7 @@ export class CreateUserUseCase {
       username:     input.username.trim().toLowerCase(),
       passwordHash,
       role:         input.role,
+      site:         input.site ?? '',
       active:       true,
     });
 

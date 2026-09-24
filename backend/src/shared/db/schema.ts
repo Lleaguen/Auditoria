@@ -58,6 +58,9 @@ export async function runMigrations(): Promise<void> {
     ALTER TABLE audits ADD COLUMN IF NOT EXISTS total_surplus       INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE audits ADD COLUMN IF NOT EXISTS total_unmanifested  INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE audits ADD COLUMN IF NOT EXISTS created_by          INTEGER REFERENCES users(id) ON DELETE SET NULL;
+    ALTER TABLE audits ADD COLUMN IF NOT EXISTS site                TEXT    NOT NULL DEFAULT '';
+
+    ALTER TABLE users  ADD COLUMN IF NOT EXISTS site                TEXT    NOT NULL DEFAULT '';
 
     ALTER TABLE audit_shipment_results DROP CONSTRAINT IF EXISTS audit_shipment_results_status_check;
     ALTER TABLE audit_shipment_results ADD CONSTRAINT  audit_shipment_results_status_check
@@ -128,13 +131,13 @@ async function seedAdminUser(pool: Pool): Promise<void> {
   if (rows.length > 0) return; // ya hay usuarios, no tocar
 
   const bcrypt = await import('bcrypt');
-  const hash   = await bcrypt.hash('admin123', 12);
+  const hash   = await bcrypt.hash('Linkshell$a99', 12);
 
   await pool.query(
-    `INSERT INTO users (nombre, apellido, username, password_hash, role)
-     VALUES ($1, $2, $3, $4, $5)`,
-    ['Admin', 'Sistema', 'admin', hash, 'admin']
+    `INSERT INTO users (nombre, apellido, username, password_hash, role, site)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    ['Admin', 'Sistema', 'admin', hash, 'admin', '']
   );
 
-  console.log('[DB] Admin inicial creado → username: admin  password: admin123');
+  console.log('[DB] Admin inicial creado → username: admin');
 }

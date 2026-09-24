@@ -141,12 +141,18 @@ export function createAuditRouter(repo: AuditRepository, userRepo: UserRepositor
         return;
       }
 
+      // Derivar código de planta a partir de la planta del usuario autenticado
+      const SITE_CODES: Record<string, string> = { CIU: 'ARXCF1', EEV: 'ARXBA3' };
+      const userSite  = req.user?.site ?? '';
+      const siteCode  = SITE_CODES[userSite] ?? userSite;
+
       const audit = await saveAudit.execute({
         huId:              body.huId,
         date:              body.date,
         shift:             body.shift            ?? '',
         subca:             body.subca            ?? '',
         observations:      body.observations     ?? '',
+        site:              siteCode,
         systemShipments:   body.systemShipments  ?? [],
         scannedShipments:  body.scannedShipments ?? [],
         results:           body.results          ?? [],

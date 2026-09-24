@@ -1,7 +1,7 @@
 import type { AuditResult } from './types';
 import type { AuthUser, LoginResponse, UserRole } from './auth';
 import { getToken, clearSession } from './auth';
-import { getActiveApiUrl } from './siteConfig';
+import { getActiveApiUrl, getStoredSite } from './siteConfig';
 
 // BASE_URL se resuelve en cada request para respetar la planta activa
 // elegida por el usuario en runtime (guardada en localStorage).
@@ -60,7 +60,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export async function login(username: string, password: string): Promise<LoginResponse> {
   return request<LoginResponse>('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, password, site: getStoredSite() ?? undefined }),
   });
 }
 
@@ -76,6 +76,7 @@ export interface CreateUserInput {
   username: string;
   password: string;
   role: UserRole;
+  site: 'CIU' | 'EEV' | '';
 }
 
 export async function fetchUsers(): Promise<AuthUser[]> {

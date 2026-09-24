@@ -11,7 +11,7 @@ export interface LoginResult {
 export class LoginUseCase {
   constructor(private readonly repo: UserRepository) {}
 
-  async execute(username: string, password: string): Promise<LoginResult> {
+  async execute(username: string, password: string, requestedSite?: string): Promise<LoginResult> {
     if (!username || !password) {
       const err = new Error('Username y contraseña son requeridos');
       (err as any).statusCode = 400;
@@ -39,12 +39,26 @@ export class LoginUseCase {
       throw err;
     }
 
-    const secret      = process.env.JWT_SECRET ?? 'secret_dev';
+    // Restricción de planta: auditors solo pueden acceder a su planta asignada.
+    // El admin (site='') puede acceder a cualquier planta.
+    if (user.role !== 'admin' && user.site && requestedSite && user.site !== requestedSite) {
+      const err = new Error('No tenés acceso a esta planta.');
+      (err as any).statusCode = 403;
+      throw err;
+    }
+
+    const secret      = process.env.JWT_SECRET;
     const expiresIn   = process.env.JWT_EXPIRES_IN ?? '8h';
     const publicUser  = toPublicUser(user);
 
+    if (!secret) {
+      const err = new Error('Error de configuración del servidor');
+      (err as any).statusCode = 500;
+      throw err;
+    }
+
     const token = jwt.sign(
-      { userId: user.id, username: user.username, role: user.role },
+      { userId: user.id, username: user.username, role: user.role, site: user.site },
       secret,
       { expiresIn } as jwt.SignOptions
     );

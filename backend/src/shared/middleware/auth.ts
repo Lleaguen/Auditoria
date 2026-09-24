@@ -5,6 +5,7 @@ export interface JwtPayload {
   userId: number;
   username: string;
   role: 'admin' | 'auditor';
+  site: string;
 }
 
 // Extiende Request para que los handlers puedan acceder al usuario autenticado
@@ -25,7 +26,13 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   }
 
   const token  = header.split(' ')[1];
-  const secret = process.env.JWT_SECRET ?? 'secret_dev';
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    console.error('[Auth] JWT_SECRET no está definido');
+    res.status(500).json({ success: false, error: 'Error de configuración del servidor' });
+    return;
+  }
 
   try {
     const payload = jwt.verify(token, secret) as JwtPayload;

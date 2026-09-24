@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { corsMiddleware } from './shared/middleware/cors';
 import { errorHandler, notFoundHandler } from './shared/middleware/errorHandler';
 import { requireAuth } from './shared/middleware/auth';
@@ -30,6 +32,28 @@ async function bootstrap() {
   // App Express
   const app = express();
 
+  // ── Seguridad: headers HTTP ───────────────────────────────────────────────
+  app.use(helmet());
+
+  // ── Rate limiting general: 200 req/min por IP ─────────────────────────────
+  const generalLimiter = rateLimit({
+    windowMs: 60 * 1000,       // 1 minuto
+    max: 200,                  // máximo 200 requests por IP por ventana
+    standardHeaders: true,     // devuelve RateLimit-* headers
+    legacyHeaders: false,
+    message: { success: false, error: 'Demasiadas solicitudes. Intentá de nuevo en un minuto.' },
+  });
+  app.use(generalLimiter);
+
+  // ── Rate limiting estricto en login: 10 intentos/15min por IP ────────────
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,  // 15 minutos
+    max: 10,                   // máximo 10 intentos de login por IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, error: 'Demasiados intentos de login. Intentá de nuevo en 15 minutos.' },
+  });
+
   app.use(corsMiddleware);
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -44,7 +68,8 @@ async function bootstrap() {
     }
   });
 
-  // Auth (login público, gestión de usuarios protegida por rol)
+  // Auth (login público con rate limiting estricto, gestión de usuarios protegida por rol)
+  app.use('/api/auth/login', loginLimiter);
   app.use('/api/auth', createUserRouter(userRepo));
 
   // Audits — requiere token válido
