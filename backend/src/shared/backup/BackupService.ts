@@ -41,10 +41,18 @@ interface ShipmentResultRow {
   crossed_from_hu: string | null;
 }
 
-// ── Cliente de Resend ─────────────────────────────────────────────────────────
-const resend = new Resend(process.env.RESEND_API_KEY);
-const BACKUP_EMAIL_TO   = process.env.BACKUP_EMAIL_TO   ?? 'franco.nahuel.romero@ocasa.com';
-const BACKUP_EMAIL_FROM = process.env.BACKUP_EMAIL_FROM ?? 'onboarding@resend.dev';
+// ── Cliente de Resend (lazy — se inicializa recién cuando se usa) ─────────────
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) throw new Error('[Backup] RESEND_API_KEY no está configurada');
+    _resend = new Resend(key);
+  }
+  return _resend;
+}
+const BACKUP_EMAIL_TO   = () => process.env.BACKUP_EMAIL_TO   ?? 'franco.nahuel.romero@ocasa.com';
+const BACKUP_EMAIL_FROM = () => process.env.BACKUP_EMAIL_FROM ?? 'onboarding@resend.dev';
 
 // ── Generador del Excel ───────────────────────────────────────────────────────
 
@@ -249,9 +257,9 @@ export async function runDailyBackup(pool: Pool): Promise<void> {
   console.log(`[Backup] Excel generado en memoria (${buffer.length} bytes).`);
 
   // 4. Enviar por email con el Excel como adjunto
-  const { error: emailError } = await resend.emails.send({
-    from:    BACKUP_EMAIL_FROM,
-    to:      BACKUP_EMAIL_TO,
+  const { error: emailError } = await getResend().emails.send({
+    from:    BACKUP_EMAIL_FROM(),
+    to:      BACKUP_EMAIL_TO(),
     subject: `Backup auditorías ${targetDate}`,
     html: `
       <p>Backup automático del sistema de auditorías.</p>
@@ -274,7 +282,7 @@ export async function runDailyBackup(pool: Pool): Promise<void> {
     throw new Error(`[Backup] Fallo el envío del email: ${emailError.message}`);
   }
 
-  console.log(`[Backup] Email enviado a ${BACKUP_EMAIL_TO} con adjunto ${filename}.`);
+  console.log(`[Backup] Email enviado a ${BACKUP_EMAIL_TO()} con adjunto ${filename}.`);
 
   // 5. Eliminar datos auditados SOLO si el email fue exitoso
   //    (CASCADE borra shipment_results y post_audit_results automáticamente)
