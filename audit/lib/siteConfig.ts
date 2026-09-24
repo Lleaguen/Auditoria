@@ -13,8 +13,10 @@ export interface SiteOption {
 
 const STORAGE_KEY = 'audit_site';
 
-// Lee la URL directamente de las env vars injectadas por Next.js en build time.
-// Si no existen (entorno local sin .env), devuelve localhost con puertos por defecto.
+const RENDER_URL = 'https://audit-backend-y8c1.onrender.com';
+
+// Lee la URL de las env vars inyectadas por Next.js en build time.
+// Si no existen, usa el backend de Render como fallback.
 export function getApiUrlForSite(siteKey: SiteKey): string {
   const envUrl = siteKey === 'CIU'
     ? process.env.NEXT_PUBLIC_API_URL_CIU
@@ -24,9 +26,7 @@ export function getApiUrlForSite(siteKey: SiteKey): string {
     return envUrl.trim().replace(/\/$/, '');
   }
 
-  // Fallback solo para desarrollo local
-  const port = siteKey === 'CIU' ? '3001' : '3002';
-  return `http://localhost:${port}`;
+  return RENDER_URL;
 }
 
 export const SITES: SiteOption[] = [
