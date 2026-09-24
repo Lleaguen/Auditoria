@@ -35,6 +35,15 @@ export default function DashboardPanel() {
   const { user } = useAuth();
   const auditorName = user ? `${user.nombre} ${user.apellido}`.trim() : '';
 
+  // ── Filtro automático por site según rol/site del usuario ─────────────────
+  // Admin sin site asignado → puede ver todo y filtrar por site
+  // Auditor con site → solo ve su site, sin opción de cambiar
+  const isAdmin = user?.role === 'admin';
+  const userSite = user?.site ?? '';           // '' en admin sistema
+  const canFilterBySite = isAdmin && !userSite; // solo admin sin site asignado
+
+  const [filterSite, setFilterSite] = useState(''); // '' = todos (solo admin)
+
   // ── Filtros ───────────────────────────────────────────────────────────────
   const [filterDate,  setFilterDate]  = useState('');
   const [filterShift, setFilterShift] = useState('');
@@ -45,12 +54,16 @@ export default function DashboardPanel() {
 
   const filtered = useMemo(() => {
     return audits.filter((a) => {
+      // Filtro automático: auditor solo ve su site; admin ve según selector
+      const effectiveSite = canFilterBySite ? filterSite : userSite;
+      if (effectiveSite && a.site !== effectiveSite) return false;
+
       if (filterDate  && a.date  !== filterDate)  return false;
       if (filterShift && a.shift !== filterShift) return false;
       if (filterSubca && !a.subca.toLowerCase().includes(filterSubca.toLowerCase())) return false;
       return true;
     });
-  }, [audits, filterDate, filterShift, filterSubca]);
+  }, [audits, filterDate, filterShift, filterSubca, filterSite, canFilterBySite, userSite]);
 
   const hasFilters = filterDate || filterShift || filterSubca;
   const clearFilters = () => { setFilterDate(''); setFilterShift(''); setFilterSubca(''); };
@@ -117,8 +130,7 @@ export default function DashboardPanel() {
       'Cruzados':           d.totalCrossed,
       'Sin manifestar':     d.totalUnmanifested,
       '% con errores':      `${d.percentWithErrors.toFixed(2)}%`,
-    }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dailyRows), 'Por Fecha');
+    }));    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dailyRows), 'Por Fecha');
 
     // Hoja 2: Por Sub-CA
     const subcaRows = subcaStats.map((s) => ({
@@ -135,6 +147,7 @@ export default function DashboardPanel() {
     // Hoja 3: Historial completo
     const histRows = filtered.map((a) => ({
       'Auditor':       a.createdByName ?? auditorName,
+      'Site':          a.site || '—',
       'Fecha':         a.date,
       'Turno':         a.shift,
       'HU':            a.huId,
@@ -176,6 +189,7 @@ export default function DashboardPanel() {
         shipmentRows.push({
           'Fecha':              a.date,
           'Turno':              a.shift,
+          'Site':               isFirst ? (a.site || '—') : '',
           'HU':                 a.huId,
           'Sub-CA':             a.subca,
           // Columnas resumen solo en la primera fila del HU
@@ -227,6 +241,37 @@ export default function DashboardPanel() {
       <div className="bg-white rounded-2xl border border-zinc-200 p-4 shadow-sm space-y-4">
         {/* Filtros */}
         <div className="flex flex-wrap items-end gap-3">
+          {/* Selector de site — solo visible para admin sin site asignado */}
+          {canFilterBySite && (
+            <div>
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-widest block mb-1.5">Planta</label>
+              <div className="flex gap-1">
+                {['', 'CIU', 'EEV'].map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setFilterSite(s)}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                      filterSite === s
+                        ? s === 'CIU' ? 'bg-indigo-600 text-white border-indigo-600'
+                          : s === 'EEV' ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-zinc-900 text-white border-zinc-900'
+                        : 'bg-zinc-50 text-zinc-500 border-zinc-200 hover:border-zinc-300'
+                    }`}
+                  >
+                    {s === '' ? 'Todos' : s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Badge de site fijo para auditores */}
+          {!canFilterBySite && userSite && (
+            <div className="flex items-end pb-1">
+              <span className={`px-3 py-1.5 rounded-xl text-xs font-bold border ${userSite === 'CIU' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
+                {userSite}
+              </span>
+            </div>
+          )}
           <div>
             <label className="text-xs font-semibold text-zinc-400 uppercase tracking-widest block mb-1.5">Fecha</label>
             <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="input-base text-sm" />
@@ -423,6 +468,7 @@ function AuditHistoryTable({ audits, onDelete }: { audits: AuditResult[]; onDele
             <tr className="bg-zinc-900 text-zinc-300">
               <th className="px-4 py-3 text-left font-semibold">Fecha</th>
               <th className="px-4 py-3 text-left font-semibold">Turno</th>
+              <th className="px-4 py-3 text-left font-semibold">Site</th>
               <th className="px-4 py-3 text-left font-semibold">HU</th>
               <th className="px-4 py-3 text-left font-semibold">Sub-CA</th>
               <th className="px-4 py-3 text-right font-semibold">Sistema</th>
@@ -441,6 +487,12 @@ function AuditHistoryTable({ audits, onDelete }: { audits: AuditResult[]; onDele
                 <td className="px-4 py-2.5 text-zinc-600">{a.date}</td>
                 <td className="px-4 py-2.5">
                   <span className="bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded text-[11px] font-semibold">{a.shift}</span>
+                </td>
+                <td className="px-4 py-2.5">
+                  {a.site
+                    ? <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${a.site === 'CIU' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}`}>{a.site}</span>
+                    : <span className="text-zinc-300">—</span>
+                  }
                 </td>
                 <td className="px-4 py-2.5 font-mono text-zinc-800 text-[11px]">{a.huId}</td>
                 <td className="px-4 py-2.5 text-zinc-500">{a.subca}</td>

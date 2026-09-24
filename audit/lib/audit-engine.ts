@@ -91,23 +91,27 @@ export function runAudit(
     const found = data.find((r) => r.shipmentId === trimmed);
 
     if (found && !matchHuId(found.outboundId, huId)) {
-      // Pertenece a otro HU → CRUZADO (sin importar sub-ca)
       const dispatched =
         (found.statusDescription || found.hubStatus || '')
           .toLowerCase()
           .includes('dispatch') ||
         (found.hubStatus || '').toLowerCase().includes('dispatch');
 
+      // Cruzado: subca del shipment es DIFERENTE a la subca del HU auditado
+      // Sobrante: subca del shipment es la MISMA (está en otro HU pero misma zona)
+      const shipmentSubca = found.labelingZone || 'N/A';
+      const isCrossed = shipmentSubca !== mainSubca;
+
       results.push({
         shipmentId: trimmed,
-        status: 'crossed',
-        subca: found.labelingZone || 'N/A',
+        status: isCrossed ? 'crossed' : 'surplus',
+        subca: shipmentSubca,
         statusDescription: found.statusDescription || found.hubStatus || '',
         labelingLastPrintUser: found.labelingLastPrintUser || '',
         labelingAuthorizationDate: found.labelingAuthorizationDate || '',
         outboundUserIds: found.outboundUserIds || '',
         dispatched,
-        crossedFromHu: found.outboundId,
+        crossedFromHu: isCrossed ? found.outboundId : undefined,
       });
     } else {
       // No encontrado en ningún HU del dataset → SIN MANIFESTAR
@@ -193,17 +197,26 @@ export function analyzeShipmentForPaqueteria(
   const found = data.find((r) => r.shipmentId === normalized);
   if (found && !matchHuId(found.outboundId, huId)) {
     const dispatched = (found.statusDescription || found.hubStatus || '').toLowerCase().includes('dispatch') || (found.hubStatus || '').toLowerCase().includes('dispatch');
+    const shipmentSubca = found.labelingZone || 'N/A';
+    // Determinar subca del HU auditado
+    const huRows = getShipmentsForHu(data, huId);
+    const subcaCount = new Map<string, number>();
+    for (const r of huRows) { const z = r.labelingZone || 'N/A'; subcaCount.set(z, (subcaCount.get(z) ?? 0) + 1); }
+    const huSubca = [...subcaCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'N/A';
+    const isCrossed = shipmentSubca !== huSubca;
     return {
       shipmentId: normalized,
-      status: 'crossed',
-      subca: found.labelingZone || 'N/A',
+      status: isCrossed ? 'crossed' : 'surplus',
+      subca: shipmentSubca,
       statusDescription: found.statusDescription || found.hubStatus || '',
       labelingLastPrintUser: found.labelingLastPrintUser || '',
       labelingAuthorizationDate: found.labelingAuthorizationDate || '',
       outboundUserIds: found.outboundUserIds || '',
       dispatched,
-      crossedFromHu: found.outboundId,
-      reason: `Shipment cruzado: pertenece al HU ${found.outboundId}.`,
+      crossedFromHu: isCrossed ? found.outboundId : undefined,
+      reason: isCrossed
+        ? `Shipment cruzado: pertenece al HU ${found.outboundId} (Sub-CA ${shipmentSubca} ≠ ${huSubca}).`
+        : `Shipment sobrante: misma Sub-CA pero pertenece al HU ${found.outboundId}.`,
     };
   }
 
