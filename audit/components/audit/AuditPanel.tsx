@@ -12,6 +12,7 @@ import {
 import { useAppStore } from '@/lib/store';
 import { analyzeShipmentForPaqueteria, runAudit } from '@/lib/audit-engine';
 import type { AuditResult, AuditMode, PaqueteriaAnalysis, Shift } from '@/lib/types';
+import { getStoredSite } from '@/lib/siteConfig';
 import HuSearch from './HuSearch';
 import ScannerInput from './ScannerInput';
 import AuditTable from './AuditTable';
@@ -81,7 +82,8 @@ export default function AuditPanel() {
   // Al comparar, corre el audit y avanza al paso 3 (Resultado)
   const handleRunAudit = useCallback(() => {
     if (!huId || state.csvData.length === 0) return;
-    const result = runAudit(state.csvData, huId, scannedIds, date, shift, observations);
+    const site = getStoredSite() ?? '';
+    const result = runAudit(state.csvData, huId, scannedIds, date, shift, observations, site);
     setAudit(result);
     setSaved(false);
     setSaveError(null);
@@ -247,6 +249,9 @@ export default function AuditPanel() {
                 </h2>
                 <p className="text-zinc-400 text-xs mt-0.5">
                   {audit.date} · Turno {audit.shift} · Sub-CA {audit.subca}
+                  {audit.site && (
+                    <span className="ml-2 font-semibold text-indigo-500">[{audit.site}]</span>
+                  )}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -282,6 +287,9 @@ export default function AuditPanel() {
               </h2>
               <p className="text-zinc-400 text-xs mt-0.5">
                 {audit.date} · Turno {audit.shift} · Sub-CA {audit.subca}
+                {audit.site && (
+                  <span className="ml-2 font-semibold text-indigo-500">[{audit.site}]</span>
+                )}
               </p>
             </div>
             {/* Resumen compacto del resultado */}

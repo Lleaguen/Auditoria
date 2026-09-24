@@ -88,6 +88,7 @@ export interface AuditResult {
   date: string;
   shift: string;
   subca: string;
+  site: string;
   observations: string;
   systemShipments: string[];
   scannedShipments: string[];

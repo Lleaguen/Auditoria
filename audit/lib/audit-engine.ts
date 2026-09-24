@@ -29,7 +29,8 @@ export function runAudit(
   scannedIds: string[],
   date: string,
   shift: string,
-  observations: string = ''
+  observations: string = '',
+  site: string = ''
 ): AuditResult {
   const systemRows = getShipmentsForHu(data, huId);
 
@@ -142,6 +143,7 @@ export function runAudit(
     date,
     shift,
     subca: mainSubca,
+    site,
     observations,
     systemShipments: systemRows.map((r) => r.shipmentId),
     scannedShipments: scannedIds,

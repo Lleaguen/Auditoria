@@ -36,6 +36,7 @@ type Action =
 function normalizeAudit(a: AuditResult): AuditResult {
   return {
     ...a,
+    site:              a.site              ?? '',
     observations:      a.observations      ?? '',
     totalSurplus:      a.totalSurplus      ?? 0,
     totalCrossed:      a.totalCrossed      ?? 0,
