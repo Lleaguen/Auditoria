@@ -19,29 +19,3 @@ services:
         value: franco.nahuel.romero@ocasa.com
       - key: BACKUP_EMAIL_FROM
         value: onboarding@resend.dev
-      - key: DB_HOST
-        fromDatabase:
-          name: audit-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: audit-db
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: audit-db
-          property: database
-      - key: DB_USER
-        fromDatabase:
-          name: audit-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: audit-db
-          property: password
-
-databases:
-  - name: audit-db
-    databaseName: audit_db
-    user: audit_user
-    plan: free
