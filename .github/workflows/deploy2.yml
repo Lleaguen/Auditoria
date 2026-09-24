@@ -14,6 +14,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: github-pages
     defaults:
       run:
         working-directory: audit
@@ -34,6 +35,14 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL_CIU: ${{ secrets.API_URL_CIU }}
+          NEXT_PUBLIC_API_URL_EEV: ${{ secrets.API_URL_EEV }}
+
+      - name: Verify env vars were set
+        run: |
+          if [ -z "$NEXT_PUBLIC_API_URL_CIU" ]; then echo "ERROR: NEXT_PUBLIC_API_URL_CIU is empty"; else echo "OK: NEXT_PUBLIC_API_URL_CIU is set"; fi
+          if [ -z "$NEXT_PUBLIC_API_URL_EEV" ]; then echo "ERROR: NEXT_PUBLIC_API_URL_EEV is empty"; else echo "OK: NEXT_PUBLIC_API_URL_EEV is set"; fi
         env:
           NEXT_PUBLIC_API_URL_CIU: ${{ secrets.API_URL_CIU }}
           NEXT_PUBLIC_API_URL_EEV: ${{ secrets.API_URL_EEV }}
