@@ -1,7 +1,7 @@
 // ── Configuración de planta (CIU / EEV) ──────────────────────────────────────
-// Las URLs se queman en el bundle al momento del build desde las variables
-// de entorno de GitHub Actions. En runtime el usuario elige cuál usar
-// y la elección se persiste en localStorage.
+// Las URLs se inyectan en el bundle al momento del build desde las variables
+// de entorno de GitHub Actions (NEXT_PUBLIC_API_URL_CIU / EEV).
+// En runtime el usuario elige cuál planta usar y se persiste en localStorage.
 
 export type SiteKey = 'CIU' | 'EEV';
 
@@ -9,12 +9,13 @@ export interface SiteOption {
   key:   SiteKey;
   label: string;
   color: string;
-  apiUrl: string;
 }
 
 const STORAGE_KEY = 'audit_site';
 
-function getDefaultApiUrl(siteKey: SiteKey): string {
+// Lee la URL directamente de las env vars injectadas por Next.js en build time.
+// Si no existen (entorno local sin .env), devuelve localhost con puertos por defecto.
+export function getApiUrlForSite(siteKey: SiteKey): string {
   const envUrl = siteKey === 'CIU'
     ? process.env.NEXT_PUBLIC_API_URL_CIU
     : process.env.NEXT_PUBLIC_API_URL_EEV;
@@ -23,37 +24,21 @@ function getDefaultApiUrl(siteKey: SiteKey): string {
     return envUrl.trim().replace(/\/$/, '');
   }
 
-  if (typeof window !== 'undefined') {
-    const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
-    const host = window.location.hostname;
-
-    if (host.includes('github.io')) {
-      return siteKey === 'CIU'
-        ? 'https://172.19.40.203'
-        : 'https://172.19.84.190';
-    }
-
-    const port = siteKey === 'CIU' ? '3001' : '3002';
-    return `${protocol}://${host}:${port}`;
-  }
-
-  return siteKey === 'CIU'
-    ? 'https://172.19.40.203'
-    : 'https://172.19.84.190';
+  // Fallback solo para desarrollo local
+  const port = siteKey === 'CIU' ? '3001' : '3002';
+  return `http://localhost:${port}`;
 }
 
 export const SITES: SiteOption[] = [
   {
-    key:    'CIU',
-    label:  'Soldati (CIU)',
-    color:  'indigo',
-    apiUrl: getDefaultApiUrl('CIU'),
+    key:   'CIU',
+    label: 'Soldati (CIU)',
+    color: 'indigo',
   },
   {
-    key:    'EEV',
-    label:  'Echeverría (EEV)',
-    color:  'emerald',
-    apiUrl: getDefaultApiUrl('EEV'),
+    key:   'EEV',
+    label: 'Echeverría (EEV)',
+    color: 'emerald',
   },
 ];
 
@@ -77,5 +62,5 @@ export function getActiveSite(): SiteOption {
 }
 
 export function getActiveApiUrl(): string {
-  return getActiveSite().apiUrl;
+  return getApiUrlForSite(getActiveSite().key);
 }
