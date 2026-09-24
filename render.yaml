@@ -9,14 +9,16 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        generateValue: false   # Render lo asigna automáticamente
       - key: JWT_SECRET
-        generateValue: true    # Render genera un valor aleatorio seguro
+        generateValue: true
       - key: JWT_EXPIRES_IN
         value: 8h
-      - key: ALLOWED_ORIGIN
-        sync: false            # Lo ponés manualmente en el dashboard
+      - key: BACKUP_CRON
+        value: "0 10 * * *"
+      - key: BACKUP_EMAIL_TO
+        value: franco.nahuel.romero@ocasa.com
+      - key: BACKUP_EMAIL_FROM
+        value: onboarding@resend.dev
       - key: DB_HOST
         fromDatabase:
           name: audit-db
@@ -37,18 +39,6 @@ services:
         fromDatabase:
           name: audit-db
           property: password
-      - key: API_KEY_CIU
-        sync: false            # Lo ponés manualmente en el dashboard
-      - key: API_KEY_EEV
-        sync: false            # Lo ponés manualmente en el dashboard
-      - key: BACKUP_CRON
-        value: "0 10 * * *"
-      - key: RESEND_API_KEY
-        sync: false            # Lo ponés manualmente en el dashboard
-      - key: BACKUP_EMAIL_TO
-        value: franco.nahuel.romero@ocasa.com
-      - key: BACKUP_EMAIL_FROM
-        value: onboarding@resend.dev
 
 databases:
   - name: audit-db
