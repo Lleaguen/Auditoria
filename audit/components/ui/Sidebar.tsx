@@ -89,13 +89,16 @@ export default function Sidebar() {
                 {SITES.find((s) => s.key === activeSite)?.label ?? activeSite}
               </span>
             </div>
-            <button
-              onClick={handleSwitchSite}
-              title="Cambiar planta"
-              className="text-zinc-500 hover:text-zinc-200 p-1 rounded hover:bg-zinc-700 transition-colors"
-            >
-              <RefreshCw size={11} />
-            </button>
+            {/* Solo el superadmin (username==='admin') puede cambiar de planta */}
+            {user?.username === 'admin' && (
+              <button
+                onClick={handleSwitchSite}
+                title="Cambiar planta"
+                className="text-zinc-500 hover:text-zinc-200 p-1 rounded hover:bg-zinc-700 transition-colors"
+              >
+                <RefreshCw size={11} />
+              </button>
+            )}
           </div>
         )}
       </div>

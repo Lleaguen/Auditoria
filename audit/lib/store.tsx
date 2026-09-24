@@ -117,11 +117,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Reintento automático cada 8 segundos mientras el backend esté offline.
+  // Render free tier puede tardar hasta 60s en despertar del idle.
   useEffect(() => {
-    if (user) {
-      reloadAudits();
-    }
-  }, [reloadAudits, user]);
+    if (!user) return;
+
+    reloadAudits();
+
+    const interval = setInterval(async () => {
+      if (state.backendOnline) return; // ya está online, no hace falta reintentar
+      try {
+        const online = await checkBackendHealth();
+        if (online) {
+          dispatch({ type: 'SET_BACKEND_ONLINE', payload: true });
+          const audits = await fetchAudits();
+          dispatch({ type: 'SET_AUDITS', payload: audits });
+          dispatch({ type: 'SET_LOADING_AUDITS', payload: false });
+        }
+      } catch {
+        // sigue offline, próximo reintento en 8s
+      }
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, [user, reloadAudits, state.backendOnline]);
 
   // ── Guardar auditoría en backend ─────────────────────────────────────────
   const addAudit = useCallback(async (audit: AuditResult) => {
