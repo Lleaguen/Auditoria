@@ -81,8 +81,17 @@ export default function ExportButton({ data }: ExportButtonProps) {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Reporte Diario');
 
-      const fecha = new Date().toISOString().slice(0, 10);
-      XLSX.writeFile(wb, `reporte_auditoria_${fecha}.xlsx`);
+      const fecha  = new Date().toISOString().slice(0, 10);
+      const wbout  = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob   = new Blob([wbout], { type: 'application/octet-stream' });
+      const url    = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href     = url;
+      anchor.download = `reporte_auditoria_${fecha}.xlsx`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
     } finally {
       setLoading(false);
     }

@@ -39,10 +39,15 @@ export default function DashboardPanel() {
   // Admin sin site asignado → puede ver todo y filtrar por site
   // Auditor con site → solo ve su site, sin opción de cambiar
   const isAdmin = user?.role === 'admin';
-  const userSite = user?.site ?? '';           // '' en admin sistema
-  const canFilterBySite = isAdmin && !userSite; // solo admin sin site asignado
+  const userSite = user?.site ?? '';           // 'CIU' o 'EEV', vacío en superadmin
+  const canFilterBySite = isAdmin && !userSite; // solo superadmin sin site asignado
 
-  const [filterSite, setFilterSite] = useState(''); // '' = todos (solo admin)
+  // Mapa de site key → código de planta en las auditorías
+  const SITE_CODES: Record<string, string> = { CIU: 'ARXCF1', EEV: 'ARXBA3' };
+  // Código efectivo del usuario (ej: 'ARXCF1')
+  const userSiteCode = SITE_CODES[userSite] ?? '';
+
+  const [filterSite, setFilterSite] = useState(''); // '' = todos (solo superadmin)
 
   // ── Filtros ───────────────────────────────────────────────────────────────
   const [filterDate,  setFilterDate]  = useState('');
@@ -54,16 +59,24 @@ export default function DashboardPanel() {
 
   const filtered = useMemo(() => {
     return audits.filter((a) => {
-      // Filtro automático: auditor solo ve su site; admin ve según selector
-      const effectiveSite = canFilterBySite ? filterSite : userSite;
-      if (effectiveSite && a.site !== effectiveSite) return false;
+      // Filtro por planta:
+      // - Superadmin (userSite=''): filtra según el selector (filterSite en código, ej: 'ARXCF1')
+      // - Admin/auditor con site: solo ve su código de planta (ej: 'ARXCF1')
+      if (canFilterBySite) {
+        // superadmin con selector activo
+        const selectedCode = filterSite ? (SITE_CODES[filterSite] ?? filterSite) : '';
+        if (selectedCode && a.site !== selectedCode) return false;
+      } else if (userSiteCode) {
+        // usuario con planta asignada — solo ve la suya
+        if (a.site !== userSiteCode) return false;
+      }
 
       if (filterDate  && a.date  !== filterDate)  return false;
       if (filterShift && a.shift !== filterShift) return false;
       if (filterSubca && !a.subca.toLowerCase().includes(filterSubca.toLowerCase())) return false;
       return true;
     });
-  }, [audits, filterDate, filterShift, filterSubca, filterSite, canFilterBySite, userSite]);
+  }, [audits, filterDate, filterShift, filterSubca, filterSite, canFilterBySite, userSiteCode, SITE_CODES]);
 
   const hasFilters = filterDate || filterShift || filterSubca;
   const clearFilters = () => { setFilterDate(''); setFilterShift(''); setFilterSubca(''); };
@@ -219,7 +232,16 @@ export default function DashboardPanel() {
     }
 
     const fecha = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `dashboard_auditoria_${fecha}.xlsx`);
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob  = new Blob([wbout], { type: 'application/octet-stream' });
+    const url   = URL.createObjectURL(blob);
+    const a     = document.createElement('a');
+    a.href      = url;
+    a.download  = `dashboard_auditoria_${fecha}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   if (audits.length === 0) {
@@ -264,11 +286,11 @@ export default function DashboardPanel() {
               </div>
             </div>
           )}
-          {/* Badge de site fijo para auditores */}
+          {/* Badge de site fijo para usuarios con planta asignada */}
           {!canFilterBySite && userSite && (
             <div className="flex items-end pb-1">
               <span className={`px-3 py-1.5 rounded-xl text-xs font-bold border ${userSite === 'CIU' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
-                {userSite}
+                {SITE_CODES[userSite] ?? userSite}
               </span>
             </div>
           )}
