@@ -231,6 +231,57 @@ export default function DashboardPanel() {
       XLSX.utils.book_append_sheet(wb, wsShip, 'Detalle Shipments');
     }
 
+    // Hoja 6: Sistema vs Bipeados
+    // Por cada HU: shipment sistema con estado | shipment bipeado con estado
+    const statusLabel2: Record<string, string> = {
+      ok:           'OK',
+      missing:      'Faltante',
+      surplus:      'Sobrante',
+      crossed:      'Cruzado',
+      unmanifested: 'Sin manifestar',
+    };
+    const svsRows: Record<string, string | number>[] = [];
+    for (const a of filtered) {
+      // Mapa shipmentId → estado para lookup rápido
+      const resultMap = new Map(a.results.map((r) => [r.shipmentId, r.status]));
+
+      const maxLen = Math.max(a.systemShipments.length, a.scannedShipments.length);
+      for (let i = 0; i < maxLen; i++) {
+        const sysId    = a.systemShipments[i]  ?? '';
+        const scanId   = a.scannedShipments[i] ?? '';
+        const sysState = sysId  ? (statusLabel2[resultMap.get(sysId)  ?? ''] ?? (resultMap.has(sysId)  ? '' : 'OK')) : '';
+        const scanState= scanId ? (statusLabel2[resultMap.get(scanId) ?? ''] ?? '') : '';
+        svsRows.push({
+          'Fecha':               i === 0 ? a.date   : '',
+          'Turno':               i === 0 ? a.shift  : '',
+          'HU':                  i === 0 ? a.huId   : '',
+          'Sub-CA':              i === 0 ? a.subca  : '',
+          'Shipment Sistema':    sysId,
+          'Estado Sistema':      sysState,
+          'Shipment Bipeado':    scanId,
+          'Estado Bipeado':      scanState,
+        });
+      }
+      // Fila separadora entre HUs
+      if (filtered.indexOf(a) < filtered.length - 1) {
+        svsRows.push({ 'Fecha': '', 'Turno': '', 'HU': '', 'Sub-CA': '', 'Shipment Sistema': '', 'Estado Sistema': '', 'Shipment Bipeado': '', 'Estado Bipeado': '' });
+      }
+    }
+    if (svsRows.length > 0) {
+      const wsSvS = XLSX.utils.json_to_sheet(svsRows);
+      wsSvS['!cols'] = [
+        { wch: 12 }, // Fecha
+        { wch: 8  }, // Turno
+        { wch: 18 }, // HU
+        { wch: 14 }, // Sub-CA
+        { wch: 22 }, // Shipment Sistema
+        { wch: 16 }, // Estado Sistema
+        { wch: 22 }, // Shipment Bipeado
+        { wch: 16 }, // Estado Bipeado
+      ];
+      XLSX.utils.book_append_sheet(wb, wsSvS, 'Sistema vs Bipeados');
+    }
+
     const fecha = new Date().toISOString().slice(0, 10);
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob  = new Blob([wbout], { type: 'application/octet-stream' });
