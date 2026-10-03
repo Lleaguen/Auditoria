@@ -197,89 +197,51 @@ export default function DashboardPanel() {
     };
     const shipmentRows: Record<string, string | number>[] = [];
     for (const a of filtered) {
-      a.results.forEach((r, idx) => {
+      // Mapa shipmentId → estado para lookup rápido en sistema y bipeados
+      const resultMap = new Map(a.results.map((r) => [r.shipmentId, r.status]));
+      const maxLen = Math.max(a.results.length, a.systemShipments.length, a.scannedShipments.length);
+
+      for (let idx = 0; idx < maxLen; idx++) {
+        const r       = a.results[idx];
         const isFirst = idx === 0;
+        const sysId   = a.systemShipments[idx]  ?? '';
+        const scanId  = a.scannedShipments[idx] ?? '';
+        const sysState  = sysId  ? (statusLabel[resultMap.get(sysId)  ?? ''] ?? 'OK') : '';
+        const scanState = scanId ? (statusLabel[resultMap.get(scanId) ?? ''] ?? '')    : '';
+
         shipmentRows.push({
           'Fecha':              a.date,
           'Turno':              a.shift,
           'Site':               isFirst ? (a.site || '—') : '',
           'HU':                 a.huId,
           'Sub-CA':             a.subca,
-          // Columnas resumen solo en la primera fila del HU
           'QPiezas':            isFirst ? a.totalSystem      : '',
           'QFaltantes':         isFirst ? a.totalMissing     : '',
           'QSobrantes':         isFirst ? a.totalSurplus     : '',
           'QCruzados':          isFirst ? a.totalCrossed     : '',
           'QSinManifestados':   isFirst ? a.totalUnmanifested: '',
-          // Auditor: usamos el nombre registrado en la auditoría, si no el del usuario logueado
           'Auditor':            isFirst ? (a.createdByName ?? auditorName) : '',
-          // Detalle del shipment
-          'Shipment ID':        r.shipmentId,
-          'Estado':             statusLabel[r.status] ?? r.status,
-          'Sub-CA shipment':    r.subca,
-          'Usuario impresión':  r.labelingLastPrintUser,
-          'Fecha autorización': r.labelingAuthorizationDate,
-          'Usuarios armado':    r.outboundUserIds,
-          'Despachado':         r.dispatched ? 'Sí' : 'No',
-          'HU origen (cruzado)': r.crossedFromHu ?? '',
+          // Detalle del resultado (puede estar vacío si idx >= results.length)
+          'Shipment ID':           r?.shipmentId              ?? '',
+          'Estado':                r ? (statusLabel[r.status] ?? r.status) : '',
+          'Sub-CA shipment':       r?.subca                   ?? '',
+          'Usuario impresión':     r?.labelingLastPrintUser   ?? '',
+          'Fecha autorización':    r?.labelingAuthorizationDate ?? '',
+          'Usuarios armado':       r?.outboundUserIds         ?? '',
+          'Despachado':            r ? (r.dispatched ? 'Sí' : 'No') : '',
+          'HU origen (cruzado)':   r?.crossedFromHu           ?? '',
+          // Columnas sistema vs bipeados
+          'Shipment Sistema':      sysId,
+          'Estado Sistema':        sysState,
+          'Shipment Bipeado':      scanId,
+          'Estado Bipeado':        scanState,
         });
-      });
+      }
     }
     if (shipmentRows.length > 0) {
       const wsShip = XLSX.utils.json_to_sheet(shipmentRows);
-      wsShip['!cols'] = Array(18).fill({ wch: 22 });
+      wsShip['!cols'] = Array(22).fill({ wch: 22 });
       XLSX.utils.book_append_sheet(wb, wsShip, 'Detalle Shipments');
-    }
-
-    // Hoja 6: Sistema vs Bipeados
-    // Por cada HU: shipment sistema con estado | shipment bipeado con estado
-    const statusLabel2: Record<string, string> = {
-      ok:           'OK',
-      missing:      'Faltante',
-      surplus:      'Sobrante',
-      crossed:      'Cruzado',
-      unmanifested: 'Sin manifestar',
-    };
-    const svsRows: Record<string, string | number>[] = [];
-    for (const a of filtered) {
-      // Mapa shipmentId → estado para lookup rápido
-      const resultMap = new Map(a.results.map((r) => [r.shipmentId, r.status]));
-
-      const maxLen = Math.max(a.systemShipments.length, a.scannedShipments.length);
-      for (let i = 0; i < maxLen; i++) {
-        const sysId    = a.systemShipments[i]  ?? '';
-        const scanId   = a.scannedShipments[i] ?? '';
-        const sysState = sysId  ? (statusLabel2[resultMap.get(sysId)  ?? ''] ?? (resultMap.has(sysId)  ? '' : 'OK')) : '';
-        const scanState= scanId ? (statusLabel2[resultMap.get(scanId) ?? ''] ?? '') : '';
-        svsRows.push({
-          'Fecha':               i === 0 ? a.date   : '',
-          'Turno':               i === 0 ? a.shift  : '',
-          'HU':                  i === 0 ? a.huId   : '',
-          'Sub-CA':              i === 0 ? a.subca  : '',
-          'Shipment Sistema':    sysId,
-          'Estado Sistema':      sysState,
-          'Shipment Bipeado':    scanId,
-          'Estado Bipeado':      scanState,
-        });
-      }
-      // Fila separadora entre HUs
-      if (filtered.indexOf(a) < filtered.length - 1) {
-        svsRows.push({ 'Fecha': '', 'Turno': '', 'HU': '', 'Sub-CA': '', 'Shipment Sistema': '', 'Estado Sistema': '', 'Shipment Bipeado': '', 'Estado Bipeado': '' });
-      }
-    }
-    if (svsRows.length > 0) {
-      const wsSvS = XLSX.utils.json_to_sheet(svsRows);
-      wsSvS['!cols'] = [
-        { wch: 12 }, // Fecha
-        { wch: 8  }, // Turno
-        { wch: 18 }, // HU
-        { wch: 14 }, // Sub-CA
-        { wch: 22 }, // Shipment Sistema
-        { wch: 16 }, // Estado Sistema
-        { wch: 22 }, // Shipment Bipeado
-        { wch: 16 }, // Estado Bipeado
-      ];
-      XLSX.utils.book_append_sheet(wb, wsSvS, 'Sistema vs Bipeados');
     }
 
     const fecha = new Date().toISOString().slice(0, 10);
