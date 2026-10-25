@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
-import { useJsonDashboardData, useDemoData, type ExcelRow } from '@/lib/useJsonDashboardData';
+import { useJsonDashboardData, type ExcelRow } from '@/lib/useJsonDashboardData';
 import {
   BarChart2, PackageX, PackagePlus, ClipboardList,
   TrendingDown, FlaskConical, Building2,
@@ -165,8 +165,8 @@ function computeSubca(hus: HuSummary[]): SubcaStat[] {
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function PreviewPanel() {
-  const { isAdmin, isDemo } = useAuth();
-  const router              = useRouter();
+  const { isAdmin } = useAuth();
+  const router      = useRouter();
 
   React.useEffect(() => {
     if (!isAdmin) router.replace('/dashboard');
@@ -177,10 +177,7 @@ export default function PreviewPanel() {
   const [filterShift, setFilterShift] = useState('');
   const [filterSubca, setFilterSubca] = useState('');
 
-  // El usuario demo visualiza datos ficticios; los demás admins ven el JSON real
-  const realData = useJsonDashboardData();
-  const demoData = useDemoData();
-  const { rows, loading, error } = isDemo ? demoData : realData;
+  const { rows, loading, error } = useJsonDashboardData();
 
   // Filtrar filas crudas
   const filteredRows = useMemo(() => {
@@ -223,17 +220,8 @@ export default function PreviewPanel() {
       <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
         <FlaskConical size={16} className="text-amber-500 shrink-0" />
         <p className="text-amber-700 text-sm">
-          {isDemo ? (
-            <>
-              <span className="font-semibold">Modo Demo — </span>
-              Datos ficticios para presentación académica. No corresponden a operaciones reales.
-            </>
-          ) : (
-            <>
-              <span className="font-semibold">Vista de prueba — </span>
-              Datos del Excel importado ({rows.length.toLocaleString()} filas). Solo visible para administradores.
-            </>
-          )}
+          <span className="font-semibold">Vista de prueba — </span>
+          Datos del Excel importado ({rows.length.toLocaleString()} filas). Solo visible para administradores.
         </p>
       </div>
 
