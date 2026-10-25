@@ -109,6 +109,20 @@ export default function LoginPage() {
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
+
+        {/* Acceso demo */}
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              setUsername('demo');
+              setPassword('demo123');
+            }}
+            className="text-xs text-zinc-500 hover:text-indigo-400 transition-colors underline underline-offset-2"
+          >
+            Acceso demo (académico)
+          </button>
+        </div>
       </div>
     </div>
   );

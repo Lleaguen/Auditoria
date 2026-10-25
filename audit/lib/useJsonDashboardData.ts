@@ -28,15 +28,27 @@ export interface JsonDashboardState {
   error: string | null;
 }
 
+/** Carga `dashboard-data.json` (datos reales exportados desde el Excel). */
 export function useJsonDashboardData(): JsonDashboardState {
+  return useJsonFile('dashboard-data.json');
+}
+
+/** Carga `demo-data.json` (datos ficticios para presentaciones académicas). */
+export function useDemoData(): JsonDashboardState {
+  return useJsonFile('demo-data.json');
+}
+
+function useJsonFile(filename: string): JsonDashboardState {
   const [rows, setRows]       = useState<ExcelRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
+    setRows([]);
+    setError(null);
     const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
-    fetch(`${base}/dashboard-data.json`)
+    fetch(`${base}/${filename}`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -44,7 +56,7 @@ export function useJsonDashboardData(): JsonDashboardState {
       .then((data: ExcelRow[]) => setRows(data))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [filename]);
 
   return { rows, loading, error };
 }
