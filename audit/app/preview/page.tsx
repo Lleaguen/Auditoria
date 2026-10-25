@@ -10,7 +10,7 @@ export default function PreviewPage() {
         <h1 className="text-3xl font-bold text-zinc-900 tracking-tight">
           Dashboard — Avance Auditado
         </h1>
-        
+      
       </div>
 
       <PreviewPanel />
