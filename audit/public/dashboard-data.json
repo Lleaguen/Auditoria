@@ -10,8 +10,8 @@
     "totalSystem": 48,
     "totalScanned": 48,
     "totalOk": 48,
-    "totalMissing": 0,
-    "totalSurplus": 0,
+    "totalMissing": 3,
+    "totalSurplus": 1,
     "totalCrossed": 0,
     "totalUnmanifested": 0,
     "assemblyUsers": [
@@ -34,7 +34,7 @@
     "totalSystem": 37,
     "totalScanned": 37,
     "totalOk": 37,
-    "totalMissing": 0,
+    "totalMissing": 2,
     "totalSurplus": 0,
     "totalCrossed": 0,
     "totalUnmanifested": 0,
@@ -60,7 +60,7 @@
     "totalOk": 39,
     "totalMissing": 0,
     "totalSurplus": 0,
-    "totalCrossed": 0,
+    "totalCrossed": 2,
     "totalUnmanifested": 0,
     "assemblyUsers": [
       "[ext_braidomi(2475521)]"
@@ -83,7 +83,7 @@
     "totalScanned": 35,
     "totalOk": 35,
     "totalMissing": 0,
-    "totalSurplus": 0,
+    "totalSurplus": 1,
     "totalCrossed": 0,
     "totalUnmanifested": 0,
     "assemblyUsers": [
@@ -107,7 +107,7 @@
     "totalScanned": 46,
     "totalOk": 46,
     "totalMissing": 0,
-    "totalSurplus": 0,
+    "totalSurplus": 4,
     "totalCrossed": 0,
     "totalUnmanifested": 0,
     "assemblyUsers": [
@@ -131,8 +131,8 @@
     "totalScanned": 50,
     "totalOk": 50,
     "totalMissing": 0,
-    "totalSurplus": 0,
-    "totalCrossed": 0,
+    "totalSurplus": 1,
+    "totalCrossed": 2,
     "totalUnmanifested": 0,
     "assemblyUsers": [
       "[ext_rodipp(116215)]"
