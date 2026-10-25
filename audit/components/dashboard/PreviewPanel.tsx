@@ -274,7 +274,7 @@ export default function PreviewPanel() {
           {/* Tabla por Sub-CA */}
           <div>
             <h3 className="text-sm font-semibold text-zinc-700 mb-3">Estadísticas por Sub-CA</h3>
-            <SubcaTable data={subcaStats} />
+            <SubcaTable data={subcaStats} audits={audits} />
           </div>
         </>
       )}
