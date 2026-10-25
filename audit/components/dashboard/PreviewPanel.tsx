@@ -89,16 +89,6 @@ export default function PreviewPanel() {
   return (
     <div className="space-y-8">
 
-      {/* Aviso de vista de prueba */}
-      <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-        <FlaskConical size={16} className="text-amber-500 shrink-0" />
-        <p className="text-amber-700 text-sm">
-          <span className="font-semibold">Vista de prueba — </span>
-          Los datos provienen del archivo Excel importado, no de la base de datos en vivo.
-          Esta vista es solo visible para administradores.
-        </p>
-      </div>
-
       {/* Selector de sitio */}
       <div className="flex flex-wrap items-center gap-3">
         <Building2 size={14} className="text-zinc-500" />

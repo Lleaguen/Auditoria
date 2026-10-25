@@ -19,7 +19,7 @@ const NAV_ITEMS = [
 const ADMIN_ITEMS = [
   { href: '/usuarios',    label: 'Usuarios',       icon: Users,         desc: 'Gestión de accesos' },
   { href: '/rendimiento', label: 'Rendimiento',    icon: BarChart3,     desc: 'Desempeño de auditores' },
-  { href: '/preview',     label: 'Vista de prueba', icon: FlaskConical,  desc: 'Datos del Excel importado' },
+  { href: '/preview',     label: '', icon: FlaskConical,  desc: 'Datos del Excel importado' },
 ];
 
 export default function Sidebar() {
