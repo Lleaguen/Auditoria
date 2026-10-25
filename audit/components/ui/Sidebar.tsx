@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart3, ClipboardCheck, Upload, Warehouse, Users, LogOut, Shield, User, Target, Building2, RefreshCw, ClipboardX } from 'lucide-react';
+import { BarChart3, ClipboardCheck, Upload, Warehouse, Users, LogOut, Shield, User, Target, Building2, RefreshCw, ClipboardX, FlaskConical } from 'lucide-react';
 import BackendStatus from './BackendStatus';
 import { useAuth } from '@/lib/authContext';
 import { SITES, SiteKey, getStoredSite, saveSite } from '@/lib/siteConfig';
@@ -17,8 +17,9 @@ const NAV_ITEMS = [
 ];
 
 const ADMIN_ITEMS = [
-  { href: '/usuarios',    label: 'Usuarios',     icon: Users,    desc: 'Gestión de accesos' },
-  { href: '/rendimiento', label: 'Rendimiento',  icon: BarChart3, desc: 'Desempeño de auditores' },
+  { href: '/usuarios',    label: 'Usuarios',       icon: Users,         desc: 'Gestión de accesos' },
+  { href: '/rendimiento', label: 'Rendimiento',    icon: BarChart3,     desc: 'Desempeño de auditores' },
+  { href: '/preview',     label: 'Vista de prueba', icon: FlaskConical,  desc: 'Datos del Excel importado' },
 ];
 
 export default function Sidebar() {
