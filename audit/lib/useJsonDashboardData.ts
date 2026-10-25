@@ -33,7 +33,8 @@ export function useJsonDashboardData(site?: string): JsonDashboardData {
 
   useEffect(() => {
     setLoading(true);
-    fetch('/dashboard-data.json')
+    const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+    fetch(`${base}/dashboard-data.json`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
