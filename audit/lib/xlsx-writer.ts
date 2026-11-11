@@ -287,7 +287,7 @@ ${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" Co
   ];
 
   const zipBytes = buildZip(files);
-  const blob = new Blob([zipBytes], {
+  const blob = new Blob([zipBytes.buffer as ArrayBuffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
 
