@@ -16,7 +16,7 @@ import {
   ShipmentErrorChart,
   ErrorRateChart,
 } from './DailyChart';
-import * as XLSX from 'xlsx';
+import { writeXlsx } from '@/lib/xlsx-writer';
 import {
   BarChart2, PackageX, PackagePlus, ClipboardList,
   TrendingDown, Trash2, Users, Download, Search, X,
@@ -129,23 +129,24 @@ export default function DashboardPanel() {
 
   // ── Exportar todo a Excel ─────────────────────────────────────────────────
   const exportAll = () => {
-    const wb = XLSX.utils.book_new();
+    const statusLabel: Record<string, string> = {
+      ok: 'OK', missing: 'Faltante', surplus: 'Sobrante',
+      crossed: 'Cruzado', unmanifested: 'Sin manifestar',
+    };
 
-    // Hoja 1: Detalle diario
     const dailyRows = dailyStats.map((d) => ({
-      'Auditor':            auditorName,
-      'Fecha':              d.date,
-      'HUs auditados':      d.totalHusAudited,
-      'HUs con desvío':     d.husWithDeviation,
-      '% HUs con desvío':   `${d.percentHusWithDeviation.toFixed(2)}%`,
-      'Shipments':          d.totalShipmentsAudited,
-      'Faltantes':          d.totalMissing,
-      'Cruzados':           d.totalCrossed,
-      'Sin manifestar':     d.totalUnmanifested,
-      '% con errores':      `${d.percentWithErrors.toFixed(2)}%`,
-    }));    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dailyRows), 'Por Fecha');
+      'Auditor':          auditorName,
+      'Fecha':            d.date,
+      'HUs auditados':    d.totalHusAudited,
+      'HUs con desvío':   d.husWithDeviation,
+      '% HUs con desvío': `${d.percentHusWithDeviation.toFixed(2)}%`,
+      'Shipments':        d.totalShipmentsAudited,
+      'Faltantes':        d.totalMissing,
+      'Cruzados':         d.totalCrossed,
+      'Sin manifestar':   d.totalUnmanifested,
+      '% con errores':    `${d.percentWithErrors.toFixed(2)}%`,
+    }));
 
-    // Hoja 2: Por Sub-CA
     const subcaRows = subcaStats.map((s) => ({
       'Sub-CA':         s.subca,
       'HUs auditados':  s.husAuditados,
@@ -155,29 +156,25 @@ export default function DashboardPanel() {
       'Cruzados':       s.totalCrossed,
       'Sin manifestar': s.totalUnmanifested,
     }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(subcaRows), 'Por Sub-CA');
 
-    // Hoja 3: Historial completo
     const histRows = filtered.map((a) => ({
-      'Auditor':       a.createdByName ?? auditorName,
-      'Site':          a.site || '—',
-      'Fecha':         a.date,
-      'Turno':         a.shift,
-      'HU':            a.huId,
-      'Sub-CA':        a.subca,
-      'Sistema':       a.totalSystem,
-      'Bipeados':      a.totalScanned,
-      'OK':            a.totalOk,
-      'Faltantes':     a.totalMissing,
-      'Sobrantes':     a.totalSurplus,
-      'Cruzados':      a.totalCrossed,
-      'Sin manifestar':a.totalUnmanifested,
+      'Auditor':         a.createdByName ?? auditorName,
+      'Site':            a.site || '—',
+      'Fecha':           a.date,
+      'Turno':           a.shift,
+      'HU':              a.huId,
+      'Sub-CA':          a.subca,
+      'Sistema':         a.totalSystem,
+      'Bipeados':        a.totalScanned,
+      'OK':              a.totalOk,
+      'Faltantes':       a.totalMissing,
+      'Sobrantes':       a.totalSurplus,
+      'Cruzados':        a.totalCrossed,
+      'Sin manifestar':  a.totalUnmanifested,
       'Usuarios armado': a.assemblyUsers.join(', '),
-      'Observaciones': a.observations,
+      'Observaciones':   a.observations,
     }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(histRows), 'Historial');
 
-    // Hoja 4: Ranking usuarios
     const userRows = [...userStats].sort((a, b) => b.errorRate - a.errorRate).map((u) => ({
       'Usuario':    u.userId,
       'HUs':        u.totalHus,
@@ -185,76 +182,55 @@ export default function DashboardPanel() {
       'Errores':    u.totalErrors,
       'Tasa error': `${u.errorRate.toFixed(2)}%`,
     }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(userRows), 'Usuarios Armado');
 
-    // Hoja 5: Detalle de shipments
-    const statusLabel: Record<string, string> = {
-      ok:            'OK',
-      missing:       'Faltante',
-      surplus:       'Sobrante',
-      crossed:       'Cruzado',
-      unmanifested:  'Sin manifestar',
-    };
     const shipmentRows: Record<string, string | number>[] = [];
     for (const a of filtered) {
-      // Mapa shipmentId → estado para lookup rápido en sistema y bipeados
       const resultMap = new Map(a.results.map((r) => [r.shipmentId, r.status]));
       const maxLen = Math.max(a.results.length, a.systemShipments.length, a.scannedShipments.length);
-
       for (let idx = 0; idx < maxLen; idx++) {
-        const r       = a.results[idx];
+        const r = a.results[idx];
         const isFirst = idx === 0;
-        const sysId   = a.systemShipments[idx]  ?? '';
-        const scanId  = a.scannedShipments[idx] ?? '';
-        const sysState  = sysId  ? (statusLabel[resultMap.get(sysId)  ?? ''] ?? 'OK') : '';
-        const scanState = scanId ? (statusLabel[resultMap.get(scanId) ?? ''] ?? '')    : '';
-
+        const sysId  = a.systemShipments[idx]  ?? '';
+        const scanId = a.scannedShipments[idx] ?? '';
         shipmentRows.push({
-          'Fecha':              a.date,
-          'Turno':              a.shift,
-          'Site':               isFirst ? (a.site || '—') : '',
-          'HU':                 a.huId,
-          'Sub-CA':             a.subca,
-          'QPiezas':            isFirst ? a.totalSystem      : '',
-          'QFaltantes':         isFirst ? a.totalMissing     : '',
-          'QSobrantes':         isFirst ? a.totalSurplus     : '',
-          'QCruzados':          isFirst ? a.totalCrossed     : '',
-          'QSinManifestados':   isFirst ? a.totalUnmanifested: '',
-          'Auditor':            isFirst ? (a.createdByName ?? auditorName) : '',
-          // Detalle del resultado (puede estar vacío si idx >= results.length)
-          'Shipment ID':           r?.shipmentId              ?? '',
-          'Estado':                r ? (statusLabel[r.status] ?? r.status) : '',
-          'Sub-CA shipment':       r?.subca                   ?? '',
-          'Usuario impresión':     r?.labelingLastPrintUser   ?? '',
-          'Fecha autorización':    r?.labelingAuthorizationDate ?? '',
-          'Usuarios armado':       r?.outboundUserIds         ?? '',
-          'Despachado':            r ? (r.dispatched ? 'Sí' : 'No') : '',
-          'HU origen (cruzado)':   r?.crossedFromHu           ?? '',
-          // Columnas sistema vs bipeados
-          'Shipment Sistema':      sysId,
-          'Estado Sistema':        sysState,
-          'Shipment Bipeado':      scanId,
-          'Estado Bipeado':        scanState,
+          'Fecha':               a.date,
+          'Turno':               a.shift,
+          'Site':                isFirst ? (a.site || '—') : '',
+          'HU':                  a.huId,
+          'Sub-CA':              a.subca,
+          'QPiezas':             isFirst ? a.totalSystem       : '',
+          'QFaltantes':          isFirst ? a.totalMissing      : '',
+          'QSobrantes':          isFirst ? a.totalSurplus      : '',
+          'QCruzados':           isFirst ? a.totalCrossed      : '',
+          'QSinManifestados':    isFirst ? a.totalUnmanifested : '',
+          'Auditor':             isFirst ? (a.createdByName ?? auditorName) : '',
+          'Shipment ID':         r?.shipmentId ?? '',
+          'Estado':              r ? (statusLabel[r.status] ?? r.status) : '',
+          'Sub-CA shipment':     r?.subca ?? '',
+          'Usuario impresión':   r?.labelingLastPrintUser ?? '',
+          'Fecha autorización':  r?.labelingAuthorizationDate ?? '',
+          'Usuarios armado':     r?.outboundUserIds ?? '',
+          'Despachado':          r ? (r.dispatched ? 'Sí' : 'No') : '',
+          'HU origen (cruzado)': r?.crossedFromHu ?? '',
+          'Shipment Sistema':    sysId,
+          'Estado Sistema':      sysId ? (statusLabel[resultMap.get(sysId) ?? ''] ?? 'OK') : '',
+          'Shipment Bipeado':    scanId,
+          'Estado Bipeado':      scanId ? (statusLabel[resultMap.get(scanId) ?? ''] ?? '') : '',
         });
       }
     }
-    if (shipmentRows.length > 0) {
-      const wsShip = XLSX.utils.json_to_sheet(shipmentRows);
-      wsShip['!cols'] = Array(22).fill({ wch: 22 });
-      XLSX.utils.book_append_sheet(wb, wsShip, 'Detalle Shipments');
-    }
 
     const fecha = new Date().toISOString().slice(0, 10);
-    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob  = new Blob([wbout], { type: 'application/octet-stream' });
-    const url   = URL.createObjectURL(blob);
-    const a     = document.createElement('a');
-    a.href      = url;
-    a.download  = `dashboard_auditoria_${fecha}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    writeXlsx(
+      [
+        { name: 'Por Fecha',       rows: dailyRows },
+        { name: 'Por Sub-CA',      rows: subcaRows },
+        { name: 'Historial',       rows: histRows },
+        { name: 'Usuarios Armado', rows: userRows },
+        ...(shipmentRows.length > 0 ? [{ name: 'Detalle Shipments', rows: shipmentRows }] : []),
+      ],
+      `dashboard_auditoria_${fecha}.xlsx`,
+    );
   };
 
   if (audits.length === 0) {
