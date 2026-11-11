@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_BASE_PATH: "/Auditoria",
   },
   images: { unoptimized: true },
+  transpilePackages: ["xlsx"],
   turbopack: {
     root: path.resolve(__dirname),
   },
